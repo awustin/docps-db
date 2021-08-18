@@ -23,3 +23,26 @@ END$$
 
 DELIMITER ;
 
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetGroupById`;
+
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetGroupById` (
+	IN id INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 101 AS ID, 'Focas' AS NAME;	
+END$$
+
+DELIMITER ;
+
