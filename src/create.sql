@@ -41,6 +41,11 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`usuarios` (
   `fecha_alta` DATETIME NULL,
   `es_admin` BIT(1) NULL DEFAULT 0,
   `idarchivo_img` INT NULL,
+  `dni` VARCHAR(45) NULL,
+  `calle` VARCHAR(45) NULL,
+  `num_calle` VARCHAR(10) NULL,
+  `direccion_extra` VARCHAR(45) NULL,
+  `puesto` VARCHAR(45) NULL,
   PRIMARY KEY (`idusuario`),
   INDEX `fk_usuario_archivos1_idx` (`idarchivo_img` ASC),
   CONSTRAINT `fk_usuario_archivos1`
@@ -382,7 +387,8 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`) VALUES (1, 'Agustin', 'Test', 1, '2021-04-13 21:00:00', 1, NULL);
+INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (1, 'Agustin', 'Juan', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
+INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (2, 'Desactivado', 'Juan', 0, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
 
 COMMIT;
 
@@ -403,6 +409,8 @@ COMMIT;
 START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (1, 'Panteras', 1, '2021-04-13 21:00:00', NULL, NULL);
+INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (2, 'Lobos', 1, '2021-05-10 20:00:00', NULL, NULL);
+INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (3, 'Pumas', 1, '2021-05-10 20:00:00', NULL, NULL);
 
 COMMIT;
 
@@ -413,6 +421,8 @@ COMMIT;
 START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (1, 1, 1, '2021-04-13 21:00:00');
+INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (2, 1, 0, '2021-05-20 21:00:00');
+INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (3, 1, 0, '2021-05-20 21:00:00');
 
 COMMIT;
 
