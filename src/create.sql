@@ -68,9 +68,11 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`cuentas` (
   `email` VARCHAR(255) NULL,
   `fecha_creacion` DATETIME NULL,
   `idusuario` INT NOT NULL,
+  `eliminada` BIT(1) NULL DEFAULT 0,
   PRIMARY KEY (`idcuenta`, `idusuario`),
   UNIQUE INDEX `username_UNIQUE` (`username` ASC),
   INDEX `fk_cuentas_usuario_idx` (`idusuario` ASC),
+  INDEX `email_idx` (`email` ASC),
   CONSTRAINT `fk_cuentas_usuario`
     FOREIGN KEY (`idusuario`)
     REFERENCES `docps-dev`.`usuarios` (`idusuario`)
@@ -377,6 +379,46 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`reportes` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
+USE `docps-dev`;
+
+DELIMITER $$
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_cuenta_insert` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_cuenta_insert` BEFORE INSERT ON `cuentas` FOR EACH ROW
+BEGIN
+    DECLARE validEmail INT DEFAULT 1; 
+    DECLARE validUsername INT DEFAULT 1;     
+	SELECT CASE WHEN (C.CUENTAS = 0) THEN 1 ELSE 0 END 
+    INTO validEmail
+	FROM (
+		SELECT COUNT(*) AS CUENTAS
+		FROM cuentas c
+		WHERE c.email = new.email
+		AND c.eliminada = 0
+    ) C;
+     
+	SELECT CASE WHEN (C.NOMBREUSUARIO = 0) THEN 1 ELSE 0 END 
+    INTO validUsername
+	FROM (
+		SELECT COUNT(*) AS NOMBREUSUARIO
+		FROM cuentas c
+		WHERE c.username = new.username
+		AND c.eliminada = 0
+    ) C;
+    
+    IF validEmail = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING EMAIL';
+	END IF;
+    
+    IF validUsername = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF; 
+END$$
+
+
+DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
@@ -398,7 +440,8 @@ COMMIT;
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`) VALUES (1, 'agusdev', '123', 'agustin94garcia@gmail.com', '2021-04-13 21:00:00', 1);
+INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (1, 'agusdev', '123', 'agustingarcia@gmail.com', '2021-04-13 21:00:00', 1, 0);
+INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (2, 'agusnouse', '456', 'otro@gmail.com', '2021-04-13 21:00:00', 1, 1);
 
 COMMIT;
 
