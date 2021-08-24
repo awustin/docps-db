@@ -113,9 +113,9 @@ BEGIN
         
 	START TRANSACTION;
 		INSERT INTO `docps-dev`.`usuarios`(`nombre`,`apellido`,`estado_alta`,`dni`,`calle`,`num_calle`,`direccion_extra`,`puesto`)
-		VALUES(nombre,apellido,0,dni,calle,num_calle,direccion_extra,puesto);     
-		INSERT INTO `docps-dev`.`cuentas`(`username`,`clave`,`email`,`fecha_creacion`,`idusuario`)
-		VALUES(username,clave,email,SYSDATE(),1);
+		VALUES(nombre,apellido,0,dni,calle,num_calle,direccion_extra,puesto); 
+        INSERT INTO `docps-dev`.`cuentas`(`username`,`clave`,`email`,`fecha_creacion`,`idusuario`)
+		VALUES(username,clave,email,SYSDATE(),last_insert_id());
 	COMMIT;
 		SELECT 'USER CREATED' AS message, 1 AS success;
 END$$
