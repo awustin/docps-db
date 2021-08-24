@@ -2,7 +2,6 @@
 
 USE `docps-dev`;
 DROP procedure IF EXISTS `UserLogin`;
-
 DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `UserLogin` (
@@ -20,13 +19,11 @@ BEGIN
     
 	SELECT * FROM cuentas c WHERE c.username = username AND c.clave = clave;	
 END$$
-
 DELIMITER ;
 
 
 USE `docps-dev`;
 DROP procedure IF EXISTS `GetGroupById`;
-
 DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `GetGroupById` (
@@ -43,13 +40,11 @@ BEGIN
     
 	SELECT 101 AS ID, 'Focas' AS NAME;	
 END$$
-
 DELIMITER ;
 
 
 USE `docps-dev`;
 DROP procedure IF EXISTS `GetUserInfoById`;
-
 DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `GetUserInfoById` (
@@ -123,5 +118,75 @@ BEGIN
 		VALUES(username,clave,email,SYSDATE(),1);
 	COMMIT;
 		SELECT 'USER CREATED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `SearchUsers`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `SearchUsers` (
+	IN desde VARCHAR(100),
+	IN hasta VARCHAR(100),
+	IN email VARCHAR(255),
+	IN nombre VARCHAR(255),
+	IN estado VARCHAR(1)
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = @text;
+	  SELECT @full_error;
+	 END;
+    
+	SET @daterange = CASE 
+		WHEN desde != '' AND hasta != '' THEN 
+			CONCAT(" AND c.fecha_creacion BETWEEN STR_TO_DATE('",desde,"','%Y-%m-%d') AND STR_TO_DATE('",hasta,"','%Y-%m-%d')")
+		WHEN desde != '' AND hasta = '' THEN
+			CONCAT(" AND c.fecha_creacion > STR_TO_DATE('",desde,"','%Y-%m-%d')")
+		ELSE
+			''
+	END;
+                        
+	SET @email = CASE 
+		WHEN email != '' THEN
+			CONCAT(" AND c.email = '",email,"'")
+		ELSE
+			''
+	END;
+	
+	SET @nombre = CASE
+		WHEN nombre != '' THEN
+			CONCAT(" AND u.nombre = '",nombre,"'")
+		ELSE
+			''
+	END;
+	
+	SET @estado = CASE
+		WHEN estado != '' THEN
+			CONCAT(" AND u.estado_alta = ",estado)
+		ELSE
+			''
+	END;
+                    
+	SET @getUsuarios = CONCAT("    
+		SELECT
+			@curRank := @curRank + 1 AS `key`
+			,u.idusuario AS id
+			,DATE_FORMAT(c.fecha_creacion, '%Y-%m-%d') AS createdOn
+			,u.nombre AS `name`
+			,u.apellido AS lastname
+			,c.email AS email
+			,case when u.estado_alta = 1 then 'active' else 'inactive' end AS status
+		FROM usuarios u 
+		JOIN cuentas c on u.idusuario = c.idusuario
+        ,(SELECT @curRank := 0) r
+		WHERE c.eliminada = 0",@daterange,@email,@nombre,@estado);
+        
+	PREPARE searchQuery FROM @getUsuarios;
+	EXECUTE searchQuery;
 END$$
 DELIMITER ;
