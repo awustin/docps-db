@@ -76,9 +76,9 @@ BEGIN
 		u.puesto AS job,
 		a.nombre AS image
 	FROM usuarios u
-	JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
-	JOIN grupos g ON g.idgrupo = ug.idgrupo
 	JOIN cuentas c ON u.idusuario = c.idusuario
+	LEFT JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
+	LEFT JOIN grupos g ON g.idgrupo = ug.idgrupo
 	LEFT JOIN archivos a ON a.idarchivo = u.idarchivo_img
 	WHERE u.idusuario = id
 	;
