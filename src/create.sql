@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`cuentas` (
   `eliminada` BIT(1) NULL DEFAULT 0,
   PRIMARY KEY (`idcuenta`, `idusuario`),
   UNIQUE INDEX `username_UNIQUE` (`username` ASC),
-  INDEX `fk_cuentas_usuario_idx` (`idusuario` ASC),
+  UNIQUE INDEX `fk_cuentas_usuario_idx` (`idusuario` ASC),
   INDEX `email_idx` (`email` ASC),
   CONSTRAINT `fk_cuentas_usuario`
     FOREIGN KEY (`idusuario`)
@@ -418,6 +418,45 @@ BEGIN
 END$$
 
 
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_cuenta_update` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_cuenta_update` BEFORE UPDATE ON `cuentas` FOR EACH ROW
+BEGIN
+    DECLARE validEmail INT DEFAULT 1; 
+    DECLARE validUsername INT DEFAULT 1;     
+	SELECT CASE WHEN (C.CUENTAS = 0) THEN 1 ELSE 0 END 
+    INTO validEmail
+	FROM (
+		SELECT COUNT(*) AS CUENTAS
+		FROM cuentas c
+		WHERE c.email = new.email
+		AND c.eliminada = 0
+        AND c.idusuario != old.idusuario
+        AND c.idcuenta != old.idcuenta
+    ) C;
+     
+	SELECT CASE WHEN (C.NOMBREUSUARIO = 0) THEN 1 ELSE 0 END 
+    INTO validUsername
+	FROM (
+		SELECT COUNT(*) AS NOMBREUSUARIO
+		FROM cuentas c
+		WHERE c.username = new.username
+		AND c.eliminada = 0
+        AND c.idusuario != old.idusuario
+        AND c.idcuenta != old.idcuenta
+    ) C;
+    
+    IF validEmail = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING EMAIL';
+	END IF;
+    
+    IF validUsername = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+END$$
+
+
 DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
@@ -430,7 +469,7 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (1, 'Agustin', 'Juan', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
-INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (2, 'Desactivado', 'Juan', 0, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
+INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (2, 'Admin', 'Test', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
 
 COMMIT;
 
@@ -441,7 +480,7 @@ COMMIT;
 START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (1, 'agusdev', '123', 'agustingarcia@gmail.com', '2021-04-13 21:00:00', 1, 0);
-INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (2, 'agusnouse', '456', 'otro@gmail.com', '2021-04-13 21:00:00', 1, 1);
+INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (2, 'testadmin', '123', 'test@admin.docps', '2021-04-13 21:00:00', 2, 0);
 
 COMMIT;
 

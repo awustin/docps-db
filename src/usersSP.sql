@@ -142,35 +142,13 @@ BEGIN
 	  SELECT @full_error;
 	 END;
     
-	SET @daterange = CASE 
-		WHEN desde != '' AND hasta != '' THEN 
-			CONCAT(" AND c.fecha_creacion BETWEEN STR_TO_DATE('",desde,"','%Y-%m-%d') AND STR_TO_DATE('",hasta,"','%Y-%m-%d')")
-		WHEN desde != '' AND hasta = '' THEN
-			CONCAT(" AND c.fecha_creacion > STR_TO_DATE('",desde,"','%Y-%m-%d')")
-		ELSE
-			''
-	END;
+	SET @daterange = CASE WHEN desde != '' AND hasta != '' THEN CONCAT(" AND c.fecha_creacion BETWEEN STR_TO_DATE('",desde,"','%Y-%m-%d') AND STR_TO_DATE('",hasta,"','%Y-%m-%d')") WHEN desde != '' AND hasta = '' THEN CONCAT(" AND c.fecha_creacion > STR_TO_DATE('",desde,"','%Y-%m-%d')") ELSE '' END;
                         
-	SET @email = CASE 
-		WHEN email != '' THEN
-			CONCAT(" AND c.email = '",email,"'")
-		ELSE
-			''
-	END;
+	SET @email = CASE WHEN email != '' THEN CONCAT(" AND c.email = '",email,"'") ELSE '' END;
 	
-	SET @nombre = CASE
-		WHEN nombre != '' THEN
-			CONCAT(" AND u.nombre = '",nombre,"'")
-		ELSE
-			''
-	END;
+	SET @nombre = CASE WHEN nombre != '' THEN CONCAT(" AND u.nombre = '",nombre,"'") ELSE '' END;
 	
-	SET @estado = CASE
-		WHEN estado != '' THEN
-			CONCAT(" AND u.estado_alta = ",estado)
-		ELSE
-			''
-	END;
+	SET @estado = CASE WHEN estado != '' THEN CONCAT(" AND u.estado_alta = ",estado) ELSE '' END;
                     
 	SET @getUsuarios = CONCAT("    
 		SELECT
@@ -188,5 +166,42 @@ BEGIN
         
 	PREPARE searchQuery FROM @getUsuarios;
 	EXECUTE searchQuery;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `UpdateUser`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `UpdateUser` (
+	IN `id` INTEGER,
+	IN `email` VARCHAR(255),
+	IN `username` VARCHAR(255),
+	IN `nombre` VARCHAR(255),
+	IN `apellido` VARCHAR(255),
+	IN `dni` VARCHAR(255),
+	IN `calle` VARCHAR(255),
+	IN `num_calle` VARCHAR(255),
+	IN `direccion_extra` VARCHAR(255),
+	IN `puesto` VARCHAR(255),
+	IN `estado_alta` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+        
+	START TRANSACTION;
+        UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`estado_alta`=estado_alta,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
+        WHERE `docps-dev`.`usuarios`.idusuario = id;
+		UPDATE `docps-dev`.`cuentas` SET `username`=username,`clave`=clave,`email`=email
+        WHERE `docps-dev`.`cuentas`.idusuario = id;
+	COMMIT;
+		SELECT 'USER UPDATED' AS message, 1 AS success;
 END$$
 DELIMITER ;
