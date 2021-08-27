@@ -197,11 +197,68 @@ BEGIN
 		END;
         
 	START TRANSACTION;
-        UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`estado_alta`=estado_alta,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
-        WHERE `docps-dev`.`usuarios`.idusuario = id;
-		UPDATE `docps-dev`.`cuentas` SET `username`=username,`clave`=clave,`email`=email
-        WHERE `docps-dev`.`cuentas`.idusuario = id;
+			UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`estado_alta`=estado_alta,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
+			WHERE `docps-dev`.`usuarios`.idusuario = id;
+			UPDATE `docps-dev`.`cuentas` SET `username`=username,`clave`=clave,`email`=email
+			WHERE `docps-dev`.`cuentas`.idusuario = id;
 	COMMIT;
 		SELECT 'USER UPDATED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `InactivateUser`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `InactivateUser` (
+	IN `id` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+	
+	START TRANSACTION;
+		UPDATE `docps-dev`.`cuentas` SET `eliminada`=1 WHERE idusuario = id;
+	COMMIT;
+		SELECT 'USER DELETED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetCurrentUserInfoById`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetCurrentUserInfoById` (
+	IN id INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 
+		u.idusuario AS id,
+		CONCAT(u.nombre,' ',u.apellido) AS completeName,
+        c.email,
+        c.username,
+        COALESCE(u.puesto,' ') AS job,
+        a.nombre AS avatar,
+        CAST(u.es_admin AS UNSIGNED) AS isAdmin
+	FROM usuarios u
+	JOIN cuentas c ON u.idusuario = c.idusuario
+    LEFT JOIN archivos a ON u.idusuario = a.idarchivo
+	WHERE u.idusuario = id
+	;
 END$$
 DELIMITER ;
