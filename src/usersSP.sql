@@ -17,28 +17,16 @@ BEGIN
 	  SELECT @full_error;
 	 END;
     
-	SELECT * FROM cuentas c WHERE c.username = username AND c.clave = clave;	
-END$$
-DELIMITER ;
-
-
-USE `docps-dev`;
-DROP procedure IF EXISTS `GetGroupById`;
-DELIMITER $$
-USE `docps-dev`$$
-CREATE PROCEDURE `GetGroupById` (
-	IN id INTEGER
-   )
-BEGIN
-	DECLARE exit handler for SQLEXCEPTION
-	 BEGIN
-	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
-	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
-	  SELECT @full_error;
-	 END;
-    
-	SELECT 101 AS ID, 'Focas' AS NAME;	
+	SELECT 
+		u.idusuario AS id,
+		g.idgrupo AS groupid,
+		g.nombre AS groupname,
+        u.es_admin AS isAdmin
+    FROM cuentas c 
+    LEFT JOIN usuarios u ON u.idusuario = c.idusuario
+	LEFT JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
+	LEFT JOIN grupos g ON g.idgrupo = ug.idgrupo
+    WHERE c.username = username AND c.clave = clave;	
 END$$
 DELIMITER ;
 

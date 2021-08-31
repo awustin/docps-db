@@ -82,6 +82,18 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `docps-dev`.`default_avatar`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`default_avatar` ;
+
+CREATE TABLE IF NOT EXISTS `docps-dev`.`default_avatar` (
+  `iddefavatar` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NULL,
+  PRIMARY KEY (`iddefavatar`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `docps-dev`.`grupos`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `docps-dev`.`grupos` ;
@@ -93,13 +105,20 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`grupos` (
   `fecha_alta` DATETIME NULL,
   `fecha_baja` DATETIME NULL,
   `idarchivo_img` INT NULL,
+  `iddefavatar` INT NULL,
   PRIMARY KEY (`idgrupo`),
   INDEX `fk_grupos_archivos1_idx` (`idarchivo_img` ASC),
+  INDEX `fk_grupos_default_avatar1_idx` (`iddefavatar` ASC),
   CONSTRAINT `fk_grupos_archivos1`
     FOREIGN KEY (`idarchivo_img`)
     REFERENCES `docps-dev`.`archivos` (`idarchivo`)
     ON DELETE SET NULL
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_grupos_default_avatar1`
+    FOREIGN KEY (`iddefavatar`)
+    REFERENCES `docps-dev`.`default_avatar` (`iddefavatar`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -457,6 +476,49 @@ BEGIN
 END$$
 
 
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_grupos_insert` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_grupos_insert` BEFORE INSERT ON `grupos` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;
+     
+	SELECT CASE WHEN (C.NOMBREGRUPO = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBREGRUPO
+		FROM grupos 
+		WHERE nombre = new.nombre
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_grupos_update` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_grupos_update` BEFORE UPDATE ON `grupos` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;     
+	SELECT CASE WHEN (C.NOMBREGRUPO = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBREGRUPO
+		FROM grupos
+		WHERE nombre = new.nombre
+        AND idgrupo != old.idgrupo
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+
+END$$
+
+
 DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
@@ -486,13 +548,27 @@ COMMIT;
 
 
 -- -----------------------------------------------------
+-- Data for table `docps-dev`.`default_avatar`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (1, 'defred');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (2, 'defyellow');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (3, 'defgreen');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (4, 'defblue');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (5, 'defpurple');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
 -- Data for table `docps-dev`.`grupos`
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (1, 'Panteras', 1, '2021-04-13 21:00:00', NULL, NULL);
-INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (2, 'Lobos', 1, '2021-05-10 20:00:00', NULL, NULL);
-INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`) VALUES (3, 'Pumas', 1, '2021-05-10 20:00:00', NULL, NULL);
+INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`, `iddefavatar`) VALUES (1, 'Panteras', 1, '2021-04-13 21:00:00', NULL, NULL, 1);
+INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`, `iddefavatar`) VALUES (2, 'Lobos', 1, '2021-05-10 20:00:00', NULL, NULL, 2);
+INSERT INTO `docps-dev`.`grupos` (`idgrupo`, `nombre`, `estado_alta`, `fecha_alta`, `fecha_baja`, `idarchivo_img`, `iddefavatar`) VALUES (3, 'Pumas', 1, '2021-05-10 20:00:00', NULL, NULL, 3);
 
 COMMIT;
 
