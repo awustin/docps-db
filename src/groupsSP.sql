@@ -119,3 +119,67 @@ BEGIN
 		SELECT 'MEMBER ADDED' AS message, 1 AS success;
 END$$
 DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetUsersForGroups`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetUsersForGroups` ()
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 		
+        u.idusuario AS `key`,
+        u.idusuario AS id,
+        CONCAT(u.nombre,' ',u.apellido) AS completeName
+	FROM usuarios u
+    JOIN cuentas c ON u.idusuario = c.idcuenta
+    , (SELECT @curRank := 0) r
+    WHERE u.estado_alta = 1 
+    AND c.eliminada = 0;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetGroupAndMembersById`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetGroupAndMembersById` (
+	IN id INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 
+		g.nombre AS name,
+		g.idgrupo AS id,
+        DATE_FORMAT(g.fecha_alta, '%Y-%m-%d') AS createdOn,
+        CASE WHEN g.estado_alta = 1 THEN 'active' ELSE 'inactive' END AS status,      
+        a.nombre AS avatar,
+        da.name AS defaultAvatar,
+		u.idusuario AS userKey,
+        u.idusuario AS userId,
+        CONCAT(u.nombre,' ',u.apellido) AS userCompleteName,
+        CAST(ug.admin_grupo AS UNSIGNED) AS userIsAdmin        
+	FROM grupos g
+    LEFT JOIN archivos a ON g.idarchivo_img = a.idarchivo
+    LEFT JOIN default_avatar da ON g.iddefavatar = da.iddefavatar
+    LEFT JOIN usuarios_grupos ug ON g.idgrupo = ug.idgrupo
+    LEFT JOIN usuarios u ON u.idusuario = ug.idusuario
+    WHERE g.idgrupo = id;	
+END$$
+DELIMITER ;
