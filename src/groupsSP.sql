@@ -59,7 +59,8 @@ BEGIN
 		LEFT JOIN archivos a ON g.idarchivo_img = a.idarchivo
 		LEFT JOIN default_avatar da ON g.iddefavatar = da.iddefavatar
 		,(SELECT @curRank := 0) r
-		WHERE 0 = 0",@nombre,@estado);
+		WHERE 0 = 0",@nombre,@estado,
+		" ORDER BY g.fecha_alta DESC");
         
 	PREPARE searchQuery FROM @getUsuarios;
 	EXECUTE searchQuery;
@@ -181,5 +182,109 @@ BEGIN
     LEFT JOIN usuarios_grupos ug ON g.idgrupo = ug.idgrupo
     LEFT JOIN usuarios u ON u.idusuario = ug.idusuario
     WHERE g.idgrupo = id;	
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `UpdateGroup`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `UpdateGroup` (
+	IN `id` INTEGER,
+	IN `nombre` VARCHAR(255),
+	IN `estado_alta` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+        
+	START TRANSACTION;
+		UPDATE `docps-dev`.`grupos` SET `nombre`=nombre,`estado_alta`=estado_alta
+		WHERE `docps-dev`.`grupos`.idgrupo = id;
+	COMMIT;
+		SELECT 'GROUP UPDATED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `DeleteGroupMembers`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `DeleteGroupMembers` (
+	IN `id` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+        
+	START TRANSACTION;
+		DELETE FROM  `docps-dev`.`usuarios_grupos` WHERE idgrupo = id;
+	COMMIT;
+		SELECT 'GROUP MEMBERS DELETED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `ActiveMembersforGroupById`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `ActiveMembersforGroupById` (
+	IN id INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 
+		COUNT(*) AS activeMembers        
+	FROM grupos g
+    JOIN usuarios_grupos ug ON g.idgrupo = ug.idgrupo
+    JOIN usuarios u ON u.idusuario = ug.idusuario
+    WHERE g.idgrupo = id
+    AND u.estado_alta = 1;	
+END$$
+DELIMITER ;
+
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `DeleteGroup`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `DeleteGroup` (
+	IN `id` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+	
+	START TRANSACTION;
+		DELETE FROM `docps-dev`.`usuarios_grupos` WHERE idusuario = id;
+        DELETE FROM `docps-dev`.`grupos` WHERE idusuario = id;
+	COMMIT;
+		SELECT 'GROUP DELETED' AS message, 1 AS success;
 END$$
 DELIMITER ;

@@ -519,6 +519,27 @@ BEGIN
 END$$
 
 
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_grupos_delete` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_grupos_delete` BEFORE DELETE ON `grupos` FOR EACH ROW
+BEGIN
+    DECLARE hasProjects INT DEFAULT 0;     
+	SELECT CASE WHEN (C.PROYECTOS > 0) THEN 1 ELSE 0 END 
+    INTO hasProjects
+	FROM (
+		SELECT COUNT(*) AS PROYECTOS
+		FROM proyectos
+		WHERE idgrupo = old.idgrupo
+    ) C;
+    
+    IF hasProjects = 1 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'HAS PROJECTS';
+	END IF;
+
+END$$
+
+
 DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
