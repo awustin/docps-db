@@ -540,6 +540,75 @@ BEGIN
 END$$
 
 
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`valdiar_proyectos_insert` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`valdiar_proyectos_insert` BEFORE INSERT ON `proyectos` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;
+     
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM proyectos 
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_proyectos_update` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_proyectos_update` BEFORE UPDATE ON `proyectos` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;     
+    
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM proyectos
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+        AND idproyecto != old.idproyecto
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar` BEFORE DELETE ON `proyectos` FOR EACH ROW
+BEGIN
+    DECLARE hasTesplans INT DEFAULT 0;     
+	SELECT CASE WHEN (C.PLANES > 0) THEN 1 ELSE 0 END 
+    INTO hasTesplans
+	FROM (
+		SELECT COUNT(*) AS PLANES
+		FROM planes
+		WHERE idgrupo = old.idgrupo
+        AND idproyecto = old.idproyecto
+    ) C;
+    
+    IF hasTesplans = 1 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'HAS TESTPLANS';
+	END IF;
+
+
+END$$
+
+
 DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
