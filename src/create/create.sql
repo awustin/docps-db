@@ -315,21 +315,23 @@ ENGINE = InnoDB;
 DROP TABLE IF EXISTS `docps-dev`.`planes_etiquetas` ;
 
 CREATE TABLE IF NOT EXISTS `docps-dev`.`planes_etiquetas` (
-  `idplan` INT NOT NULL,
   `idetiqueta` INT NOT NULL,
-  PRIMARY KEY (`idplan`, `idetiqueta`),
+  `idplan` INT NOT NULL,
+  `idproyecto` INT NOT NULL,
+  `idgrupo` INT NOT NULL,
+  PRIMARY KEY (`idetiqueta`, `idplan`, `idproyecto`, `idgrupo`),
   INDEX `fk_planes_has_etiquetas_etiquetas1_idx` (`idetiqueta` ASC),
-  INDEX `fk_planes_has_etiquetas_planes1_idx` (`idplan` ASC),
-  CONSTRAINT `fk_planes_has_etiquetas_planes1`
-    FOREIGN KEY (`idplan`)
-    REFERENCES `docps-dev`.`planes` (`idplan`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
+  INDEX `fk_planes_etiquetas_planes1_idx` (`idplan` ASC, `idproyecto` ASC, `idgrupo` ASC),
   CONSTRAINT `fk_planes_has_etiquetas_etiquetas1`
     FOREIGN KEY (`idetiqueta`)
     REFERENCES `docps-dev`.`etiquetas` (`idetiqueta`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_planes_etiquetas_planes1`
+    FOREIGN KEY (`idplan` , `idproyecto` , `idgrupo`)
+    REFERENCES `docps-dev`.`planes` (`idplan` , `idproyecto` , `idgrupo`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -587,9 +589,9 @@ END$$
 
 
 USE `docps-dev`$$
-DROP TRIGGER IF EXISTS `docps-dev`.`validar` $$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_proyectos_delete` $$
 USE `docps-dev`$$
-CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar` BEFORE DELETE ON `proyectos` FOR EACH ROW
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_proyectos_delete` BEFORE DELETE ON `proyectos` FOR EACH ROW
 BEGIN
     DECLARE hasTesplans INT DEFAULT 0;     
 	SELECT CASE WHEN (C.PLANES > 0) THEN 1 ELSE 0 END 
@@ -606,6 +608,76 @@ BEGIN
 	END IF;
 
 
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`valdiar_planes_insert` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`valdiar_planes_insert` BEFORE INSERT ON `planes` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;
+     
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM planes 
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+        AND idproyecto = new.idproyecto
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_planes_update` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_planes_update` BEFORE UPDATE ON `planes` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;     
+    
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM planes
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+        AND idproyecto = new.idproyecto
+        AND idplan != old.idplan
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_planes_delete` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_planes_delete` BEFORE DELETE ON `planes` FOR EACH ROW
+BEGIN
+    DECLARE hasCases INT DEFAULT 0;     
+	SELECT CASE WHEN (C.CASOS > 0) THEN 1 ELSE 0 END 
+    INTO hasCases
+	FROM (
+		SELECT COUNT(*) AS CASOS
+		FROM casos_prueba
+		WHERE idgrupo = old.idgrupo
+        AND idproyecto = old.idproyecto
+        AND idplan = old.idplan
+    ) C;
+    
+    IF hasCases = 1 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'HAS TESTCASES';
+	END IF;
 END$$
 
 
