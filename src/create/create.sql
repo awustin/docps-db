@@ -280,9 +280,11 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`ejecuciones` (
   `idproyecto` INT NOT NULL,
   `idgrupo` INT NOT NULL,
   `idusuario` INT NULL,
+  `fecha_ejecucion` DATETIME NOT NULL,
   PRIMARY KEY (`idejecucion`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`),
   INDEX `fk_ejecuciones_casos_prueba1_idx` (`idcaso` ASC, `idplan` ASC, `idproyecto` ASC, `idgrupo` ASC),
   INDEX `fk_ejecuciones_usuarios1_idx` (`idusuario` ASC),
+  INDEX `fecha` (`fecha_ejecucion` DESC),
   CONSTRAINT `fk_ejecuciones_casos_prueba1`
     FOREIGN KEY (`idcaso` , `idplan` , `idproyecto` , `idgrupo`)
     REFERENCES `docps-dev`.`casos_prueba` (`idcaso` , `idplan` , `idproyecto` , `idgrupo`)
@@ -400,6 +402,94 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`reportes` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
+USE `docps-dev` ;
+
+-- -----------------------------------------------------
+-- Placeholder table for view `docps-dev`.`estado_planes`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `docps-dev`.`estado_planes` (`idgrupo` INT, `idproyecto` INT, `idplan` INT, `nombre` INT, `numEjecuciones` INT, `estados` INT, `status` INT);
+
+-- -----------------------------------------------------
+-- Placeholder table for view `docps-dev`.`estado_casos`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `docps-dev`.`estado_casos` (`caso` INT, `nombre` INT, `fecha_ultima_ejecucion` INT, `id_ultima_ejecucion` INT, `estado_del_caso` INT);
+
+-- -----------------------------------------------------
+-- View `docps-dev`.`estado_planes`
+-- -----------------------------------------------------
+DROP VIEW IF EXISTS `docps-dev`.`estado_planes` ;
+DROP TABLE IF EXISTS `docps-dev`.`estado_planes`;
+USE `docps-dev`;
+CREATE  OR REPLACE VIEW `estado_planes` AS
+    SELECT 
+    pp.idgrupo,
+    pp.idproyecto,
+    pp.idplan,
+    pp.nombre
+    , count(idejecucion) AS numEjecuciones
+    , group_concat(e.estado) AS estados
+    , CASE WHEN count(idejecucion) = 0
+		THEN 'Not executed'
+        ELSE (
+			CASE WHEN 1 IN (
+			SELECT e2.estado FROM ejecuciones e2
+			RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
+            WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan
+            ) 
+				THEN 'In progress'
+				ELSE 
+                (
+					CASE WHEN 2 = ALL ( SELECT e2.estado FROM ejecuciones e2
+					RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
+					WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan 
+					) 
+						THEN 'Passed'
+						ELSE 'Failed'
+					END
+				)
+                END
+        )
+	END AS status
+    FROM ejecuciones e
+    RIGHT JOIN planes pp ON e.idgrupo = pp.idgrupo AND e.idproyecto = pp.idproyecto AND e.idplan = pp.idplan 
+    GROUP BY pp.idgrupo,pp.idproyecto,pp.idplan;
+
+-- -----------------------------------------------------
+-- View `docps-dev`.`estado_casos`
+-- -----------------------------------------------------
+DROP VIEW IF EXISTS `docps-dev`.`estado_casos` ;
+DROP TABLE IF EXISTS `docps-dev`.`estado_casos`;
+USE `docps-dev`;
+CREATE  OR REPLACE VIEW `estado_casos` AS
+	SELECT 
+		CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS caso
+		,cp.nombre
+		,MAX(e.fecha_ejecucion) fecha_ultima_ejecucion
+		,MAX(e.idejecucion) id_ultima_ejecucion
+		,CASE WHEN e.estado IS NULL THEN
+			'Not executed'
+		ELSE
+			CASE WHEN 1 IN ( SELECT e2.estado FROM ejecuciones e2
+							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
+							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
+							) THEN
+				'In progress'
+			ELSE
+				CASE WHEN 2 = ( SELECT e2.estado FROM ejecuciones e2
+							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
+							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
+							ORDER BY e2.fecha_ejecucion DESC LIMIT 1
+							) THEN
+					'Passed'
+				ELSE
+					'Failed'
+				END
+			END
+		END AS estado_del_caso
+	FROM casos_prueba cp
+	LEFT JOIN ejecuciones e ON (e.idgrupo = cp.idgrupo AND e.idproyecto = cp.idproyecto AND cp.idplan = e.idplan AND cp.idcaso = e.idcaso)
+	GROUP BY caso
+	ORDER BY caso ASC, e.fecha_ejecucion DESC;
 USE `docps-dev`;
 
 DELIMITER $$
@@ -736,6 +826,18 @@ COMMIT;
 
 
 -- -----------------------------------------------------
+-- Data for table `docps-dev`.`proyectos`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`proyectos` (`idproyecto`, `nombre`, `fecha_creacion`, `idgrupo`) VALUES (1, 'DOCPS: Dev', '2021-09-12', 1);
+INSERT INTO `docps-dev`.`proyectos` (`idproyecto`, `nombre`, `fecha_creacion`, `idgrupo`) VALUES (2, 'Proyecto vacío', '2021-09-01', 1);
+INSERT INTO `docps-dev`.`proyectos` (`idproyecto`, `nombre`, `fecha_creacion`, `idgrupo`) VALUES (3, 'DOCPS: Support Queue', '2021-09-12', 1);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
 -- Data for table `docps-dev`.`usuarios_grupos`
 -- -----------------------------------------------------
 START TRANSACTION;
@@ -743,6 +845,64 @@ USE `docps-dev`;
 INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (1, 1, 1, '2021-04-13 21:00:00');
 INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (2, 1, 0, '2021-05-20 21:00:00');
 INSERT INTO `docps-dev`.`usuarios_grupos` (`idgrupo`, `idusuario`, `admin_grupo`, `fecha_alta`) VALUES (3, 1, 0, '2021-05-20 21:00:00');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`planes`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (1, '2021-09-01', 'Pruebas iniciales', 'User acceptance', 1, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (2, '2021-09-02', 'DOCPS-52: testplans', 'Operaciones crear, modificar, eliminar', 1, 1);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`casos_prueba`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `prioridad`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`) VALUES (1, 'Crear un testplan', 'Desde la vista del proyecto', 'Tener un proyecto creado', 1, 1, 1, 1, '2021-09-12', '2021-09-12', 0);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `prioridad`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`) VALUES (2, 'Crear un testplan II', 'Desde la vista de Crear Plan', 'Pertenecer a al menos un grupo y tener un proyecto creado', 1, 1, 1, 1, '2021-09-12', '2021-09-12', 0);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`ejecuciones`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (1, 1, 'En progreso', 1, 1, 1, 1, 1, '2021-09-10');
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (2, 3, 'Falló', 2, 1, 1, 1, 1, '2021-09-11');
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (3, 2, 'Pasó', 2, 1, 1, 1, 1, '2021-09-12');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`etiquetas`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`etiquetas` (`idetiqueta`, `valor`) VALUES (1, 'UI');
+INSERT INTO `docps-dev`.`etiquetas` (`idetiqueta`, `valor`) VALUES (2, 'UA');
+INSERT INTO `docps-dev`.`etiquetas` (`idetiqueta`, `valor`) VALUES (3, 'TESTPLANS');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`planes_etiquetas`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`planes_etiquetas` (`idetiqueta`, `idplan`, `idproyecto`, `idgrupo`) VALUES (1, 1, 1, 1);
+INSERT INTO `docps-dev`.`planes_etiquetas` (`idetiqueta`, `idplan`, `idproyecto`, `idgrupo`) VALUES (2, 1, 1, 1);
+INSERT INTO `docps-dev`.`planes_etiquetas` (`idetiqueta`, `idplan`, `idproyecto`, `idgrupo`) VALUES (3, 1, 1, 1);
 
 COMMIT;
 

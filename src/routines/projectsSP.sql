@@ -28,6 +28,33 @@ DELIMITER ;
 
 
 USE `docps-dev`;
+DROP procedure IF EXISTS `GetProjectsDropdown`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetProjectsDropdown` (
+	IN idg INTEGER
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT
+			p.idproyecto AS id,
+        p.nombre AS name
+	FROM proyectos p
+    WHERE p.idgrupo = idg
+    ORDER BY p.fecha_creacion DESC;
+END$$
+DELIMITER ;
+
+
+
+USE `docps-dev`;
 DROP procedure IF EXISTS `SearchProjects`;
 DELIMITER $$
 USE `docps-dev`$$

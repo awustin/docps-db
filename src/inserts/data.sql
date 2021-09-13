@@ -14,9 +14,6 @@ INSERT INTO `cuentas` (`idcuenta`,`username`,`clave`,`email`,`fecha_creacion`,`i
 INSERT INTO `cuentas` (`idcuenta`,`username`,`clave`,`email`,`fecha_creacion`,`idusuario`,`eliminada`) VALUES (4,'ottodix','123','otto@dix.docps','2021-09-02 21:25:30',4,0);
 INSERT INTO `cuentas` (`idcuenta`,`username`,`clave`,`email`,`fecha_creacion`,`idusuario`,`eliminada`) VALUES (5,'salvadordali','123','salvador@dali.docps','2021-09-02 21:25:53',5,0);
 
--- INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (1,1,1,'2021-04-13 21:00:00');
--- INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (2,1,0,'2021-05-20 21:00:00');
--- INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (3,1,0,'2021-09-04 15:02:58');
 INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (4,3,1,'2021-09-04 15:02:58');
 INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (4,4,0,'2021-09-04 15:02:59');
 INSERT INTO `usuarios_grupos` (`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES (4,5,0,'2021-09-04 15:02:59');
