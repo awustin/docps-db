@@ -193,6 +193,18 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `docps-dev`.`prioridades`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`prioridades` ;
+
+CREATE TABLE IF NOT EXISTS `docps-dev`.`prioridades` (
+  `idprioridad` INT NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(45) NOT NULL,
+  PRIMARY KEY (`idprioridad`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `docps-dev`.`casos_prueba`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `docps-dev`.`casos_prueba` ;
@@ -205,18 +217,24 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`casos_prueba` (
   `idplan` INT NOT NULL,
   `idproyecto` INT NOT NULL,
   `idgrupo` INT NOT NULL,
-  `prioridad` INT NULL,
   `fecha_creacion` DATETIME NULL,
   `fecha_ultima_modificacion` DATETIME NULL,
   `exportado` BIT(1) NULL DEFAULT 0,
+  `idprioridad` INT NULL,
   PRIMARY KEY (`idcaso`, `idplan`, `idproyecto`, `idgrupo`),
   INDEX `fk_casos_prueba_planes1_idx` (`idplan` ASC, `idproyecto` ASC, `idgrupo` ASC),
   UNIQUE INDEX `nombre_casos_planes` (`nombre` ASC, `idproyecto` ASC, `idplan` ASC, `idgrupo` ASC),
+  INDEX `fk_casos_prueba_prioridades1_idx` (`idprioridad` ASC),
   CONSTRAINT `fk_casos_prueba_planes1`
     FOREIGN KEY (`idplan` , `idproyecto` , `idgrupo`)
     REFERENCES `docps-dev`.`planes` (`idplan` , `idproyecto` , `idgrupo`)
     ON DELETE RESTRICT
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_casos_prueba_prioridades1`
+    FOREIGN KEY (`idprioridad`)
+    REFERENCES `docps-dev`.`prioridades` (`idprioridad`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -234,6 +252,7 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`pasos` (
   `accion` VARCHAR(100) NULL,
   `datos` VARCHAR(100) NULL,
   `resultado` VARCHAR(100) NULL,
+  `orden` INT NOT NULL,
   PRIMARY KEY (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`),
   CONSTRAINT `fk_pasos_casos_prueba1`
     FOREIGN KEY (`idcaso` , `idplan` , `idproyecto` , `idgrupo`)
@@ -244,25 +263,44 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `docps-dev`.`tipoVariable`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`tipoVariable` ;
+
+CREATE TABLE IF NOT EXISTS `docps-dev`.`tipoVariable` (
+  `idtipov` INT NOT NULL AUTO_INCREMENT,
+  `nombre` VARCHAR(45) NULL,
+  PRIMARY KEY (`idtipov`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `docps-dev`.`variables`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `docps-dev`.`variables` ;
 
 CREATE TABLE IF NOT EXISTS `docps-dev`.`variables` (
-  `idvariable` INT NOT NULL AUTO_INCREMENT,
-  `valor` JSON NOT NULL,
+  `idtipov` INT NOT NULL,
+  `nombre` VARCHAR(256) NOT NULL,
+  `valor` VARCHAR(512) NULL,
   `idpaso` INT NOT NULL,
   `idcaso` INT NOT NULL,
   `idplan` INT NOT NULL,
   `idproyecto` INT NOT NULL,
   `idgrupo` INT NOT NULL,
-  PRIMARY KEY (`idvariable`, `idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`),
+  PRIMARY KEY (`idtipov`, `idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`),
   INDEX `fk_variables_pasos1_idx` (`idcaso` ASC, `idplan` ASC, `idproyecto` ASC, `idgrupo` ASC, `idpaso` ASC),
+  INDEX `fk_variables_tipoVariable1_idx` (`idtipov` ASC),
   CONSTRAINT `fk_variables_pasos1`
     FOREIGN KEY (`idcaso` , `idplan` , `idproyecto` , `idgrupo` , `idpaso`)
     REFERENCES `docps-dev`.`pasos` (`idcaso` , `idplan` , `idproyecto` , `idgrupo` , `idpaso`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_variables_tipoVariable1`
+    FOREIGN KEY (`idtipov`)
+    REFERENCES `docps-dev`.`tipoVariable` (`idtipov`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -771,6 +809,79 @@ BEGIN
 END$$
 
 
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_casos_insert` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_casos_insert` BEFORE INSERT ON `casos_prueba` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;
+     
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM casos_prueba 
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+        AND idproyecto = new.idproyecto
+        AND idplan = new.idplan
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_casos_update` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_casos_update` BEFORE UPDATE ON `casos_prueba` FOR EACH ROW
+BEGIN
+    DECLARE validName INT DEFAULT 1;     
+    
+	SELECT CASE WHEN (C.NOMBRE = 0) THEN 1 ELSE 0 END 
+    INTO validName
+	FROM (
+		SELECT COUNT(*) AS NOMBRE
+		FROM casos_prueba
+		WHERE nombre = new.nombre
+        AND idgrupo = new.idgrupo
+        AND idproyecto = new.idproyecto
+        AND idplan = new.idplan
+        AND idcaso != old.idcaso
+    ) C;
+    
+    IF validName = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'EXISTING NAME';
+	END IF;
+
+END$$
+
+
+USE `docps-dev`$$
+DROP TRIGGER IF EXISTS `docps-dev`.`validar_casos_delete` $$
+USE `docps-dev`$$
+CREATE DEFINER = CURRENT_USER TRIGGER `docps-dev`.`validar_casos_delete` BEFORE DELETE ON `casos_prueba` FOR EACH ROW
+BEGIN
+    DECLARE hasExecutions INT DEFAULT 0;     
+	SELECT CASE WHEN (C.EJEC > 0) THEN 1 ELSE 0 END 
+    INTO hasExecutions
+	FROM (
+		SELECT COUNT(*) AS EJEC
+		FROM ejecuciones
+		WHERE idgrupo = old.idgrupo
+        AND idproyecto = old.idproyecto
+        AND idplan = old.idplan
+        AND idcaso = old.idcaso
+    ) C;
+    
+    IF hasExecutions = 1 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'HAS EXECUTIONS';
+	END IF;
+END$$
+
+
 DELIMITER ;
 
 SET SQL_MODE=@OLD_SQL_MODE;
@@ -861,12 +972,62 @@ COMMIT;
 
 
 -- -----------------------------------------------------
+-- Data for table `docps-dev`.`prioridades`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`prioridades` (`idprioridad`, `nombre`) VALUES (1, 'low');
+INSERT INTO `docps-dev`.`prioridades` (`idprioridad`, `nombre`) VALUES (2, 'medium');
+INSERT INTO `docps-dev`.`prioridades` (`idprioridad`, `nombre`) VALUES (3, 'high');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
 -- Data for table `docps-dev`.`casos_prueba`
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `prioridad`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`) VALUES (1, 'Crear un testplan', 'Desde la vista del proyecto', 'Tener un proyecto creado', 1, 1, 1, 1, '2021-09-12', '2021-09-12', 0);
-INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `prioridad`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`) VALUES (2, 'Crear un testplan II', 'Desde la vista de Crear Plan', 'Pertenecer a al menos un grupo y tener un proyecto creado', 1, 1, 1, 1, '2021-09-12', '2021-09-12', 0);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (1, 'Crear un testplan', 'Desde la vista del proyecto', 'Tener un proyecto creado', 1, 1, 1, '2021-09-12', '2021-09-12', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (2, 'Crear un testplan II', 'Desde la vista de Crear Plan', 'Pertenecer a al menos un grupo y tener un proyecto creado', 1, 1, 1, '2021-09-12', '2021-09-12', 0, 1);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`pasos`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`pasos` (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `accion`, `datos`, `resultado`, `orden`) VALUES (1, 1, 1, 1, 1, 'Hacer A', 'Datos A', 'Nada', 0);
+INSERT INTO `docps-dev`.`pasos` (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `accion`, `datos`, `resultado`, `orden`) VALUES (2, 1, 1, 1, 1, 'Hacer B', 'Datos B', 'Otra vez nada', 1);
+INSERT INTO `docps-dev`.`pasos` (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `accion`, `datos`, `resultado`, `orden`) VALUES (3, 1, 1, 1, 1, 'Hacer C', 'Datos C', 'Éxito', 2);
+INSERT INTO `docps-dev`.`pasos` (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `accion`, `datos`, `resultado`, `orden`) VALUES (1, 2, 1, 1, 1, 'Hacer D', 'Datos D', 'Nada', 0);
+INSERT INTO `docps-dev`.`pasos` (`idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `accion`, `datos`, `resultado`, `orden`) VALUES (2, 2, 1, 1, 1, 'Hacer E', 'Datos E', '-', 1);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`tipoVariable`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`tipoVariable` (`idtipov`, `nombre`) VALUES (1, 'action');
+INSERT INTO `docps-dev`.`tipoVariable` (`idtipov`, `nombre`) VALUES (2, 'result');
+INSERT INTO `docps-dev`.`tipoVariable` (`idtipov`, `nombre`) VALUES (3, 'data');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`variables`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`variables` (`idtipov`, `nombre`, `valor`, `idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`) VALUES (1, 'miVar', 'uno,dos,tres', 1, 1, 1, 1, 1);
+INSERT INTO `docps-dev`.`variables` (`idtipov`, `nombre`, `valor`, `idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`) VALUES (2, 'miResultado', 'a,b,c', 1, 1, 1, 1, 1);
+INSERT INTO `docps-dev`.`variables` (`idtipov`, `nombre`, `valor`, `idpaso`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`) VALUES (3, 'miData', 'azul,rojo', 1, 1, 1, 1, 1);
 
 COMMIT;
 
