@@ -93,7 +93,6 @@ END$$
 DELIMITER ;
 
 
-
 USE `docps-dev`;
 DROP procedure IF EXISTS `UpdateTestcase`;
 DELIMITER $$
@@ -138,7 +137,6 @@ BEGIN
         , (SELECT p.nombre FROM prioridades p WHERE p.idprioridad = idprioridad) AS priority;
 END$$
 DELIMITER ;
-
 
 
 USE `docps-dev`;
@@ -229,5 +227,155 @@ BEGIN
 			AND  `pasos`.`idgrupo`=idgrupo;
 	COMMIT;
 		SELECT 'STEPS DELETED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetTestplansDropdown`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetTestplansDropdown` (
+	IN idg INTEGER
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT
+		CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS id,
+        pp.nombre AS title
+	FROM planes pp 
+    WHERE pp.idgrupo = idg
+    ORDER BY pp.nombre ASC;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetTestcasesDropdown`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetTestcasesDropdown` (
+	IN idg INTEGER,
+    IN idp INTEGER,
+    IN idpp INTEGER
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT
+		CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS id,
+        cp.nombre AS title
+	FROM casos_prueba cp
+    WHERE cp.idgrupo=idg
+    AND cp.idproyecto=idp
+    AND cp.idplan=idpp
+    ORDER BY cp.nombre ASC;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetStepsDropdown`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetStepsDropdown` (
+	IN idg INTEGER,
+    IN idp INTEGER,
+    IN idpp INTEGER
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT
+		CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS id,
+        cp.nombre AS title
+	FROM casos_prueba cp
+    WHERE cp.idgrupo=idg
+    AND cp.idproyecto=idp
+    AND cp.idplan=idpp
+    ORDER BY cp.nombre ASC;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetStepsDropdown`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetStepsDropdown` (
+	IN idg INTEGER,
+    IN idp INTEGER,
+    IN idpp INTEGER,
+    IN idcp INTEGER
+)
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT
+		CONCAT(pa.idgrupo,'.',pa.idproyecto,'.',pa.idplan,'.',pa.idcaso,'.',pa.idpaso) AS id,
+        pa.accion AS `action`,
+        pa.datos AS `data`,
+        pa.resultado AS `result`,
+        pa.orden AS `order`
+	FROM pasos pa
+    WHERE pa.idgrupo=idg
+    AND pa.idproyecto=idp
+    AND pa.idplan=idpp
+    AND pa.idcaso=idcp
+    ORDER BY pa.orden ASC;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `DeleteTestcase`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `DeleteTestcase` (
+	IN `idg` INTEGER,
+    IN `idp` INTEGER,
+    IN `idpp` INTEGER,
+    IN `idcp` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+	
+	START TRANSACTION;
+		DELETE FROM `docps-dev`.`variables` WHERE idgrupo = idg AND idproyecto = idp AND idplan = idpp AND idcaso = idcp;
+		DELETE FROM `docps-dev`.`pasos` WHERE idgrupo = idg AND idproyecto = idp AND idplan = idpp AND idcaso = idcp;
+		DELETE FROM `docps-dev`.`casos_prueba` WHERE idgrupo = idg AND idproyecto = idp AND idplan = idpp AND idcaso = idcp;
+	COMMIT;
+		SELECT 'TESTCASE DELETED' AS message, 1 AS success;
 END$$
 DELIMITER ;
