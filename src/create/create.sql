@@ -305,13 +305,24 @@ ENGINE = InnoDB;
 
 
 -- -----------------------------------------------------
+-- Table `docps-dev`.`estado_ejecuciones`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`estado_ejecuciones` ;
+
+CREATE TABLE IF NOT EXISTS `docps-dev`.`estado_ejecuciones` (
+  `idestadoejecucion` INT NOT NULL,
+  `nombre` VARCHAR(45) NULL,
+  PRIMARY KEY (`idestadoejecucion`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
 -- Table `docps-dev`.`ejecuciones`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `docps-dev`.`ejecuciones` ;
 
 CREATE TABLE IF NOT EXISTS `docps-dev`.`ejecuciones` (
   `idejecucion` INT NOT NULL AUTO_INCREMENT,
-  `estado` INT NOT NULL DEFAULT 0,
   `comentario` VARCHAR(255) NULL,
   `idcaso` INT NOT NULL,
   `idplan` INT NOT NULL,
@@ -319,10 +330,12 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`ejecuciones` (
   `idgrupo` INT NOT NULL,
   `idusuario` INT NULL,
   `fecha_ejecucion` DATETIME NOT NULL,
+  `idestadoejecucion` INT NULL,
   PRIMARY KEY (`idejecucion`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`),
   INDEX `fk_ejecuciones_casos_prueba1_idx` (`idcaso` ASC, `idplan` ASC, `idproyecto` ASC, `idgrupo` ASC),
   INDEX `fk_ejecuciones_usuarios1_idx` (`idusuario` ASC),
   INDEX `fecha` (`fecha_ejecucion` DESC),
+  INDEX `fk_ejecuciones_estado_ejecuciones1_idx` (`idestadoejecucion` ASC),
   CONSTRAINT `fk_ejecuciones_casos_prueba1`
     FOREIGN KEY (`idcaso` , `idplan` , `idproyecto` , `idgrupo`)
     REFERENCES `docps-dev`.`casos_prueba` (`idcaso` , `idplan` , `idproyecto` , `idgrupo`)
@@ -332,7 +345,12 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`ejecuciones` (
     FOREIGN KEY (`idusuario`)
     REFERENCES `docps-dev`.`usuarios` (`idusuario`)
     ON DELETE SET NULL
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_ejecuciones_estado_ejecuciones1`
+    FOREIGN KEY (`idestadoejecucion`)
+    REFERENCES `docps-dev`.`estado_ejecuciones` (`idestadoejecucion`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -465,19 +483,19 @@ CREATE  OR REPLACE VIEW `estado_planes` AS
     pp.idplan,
     pp.nombre
     , count(idejecucion) AS numEjecuciones
-    , group_concat(e.estado) AS estados
+    , group_concat(e.idestadoejecucion) AS estados
     , CASE WHEN count(idejecucion) = 0
 		THEN 'Not executed'
         ELSE (
 			CASE WHEN 1 IN (
-			SELECT e2.estado FROM ejecuciones e2
+			SELECT e2.idestadoejecucion FROM ejecuciones e2
 			RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
             WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan
             ) 
 				THEN 'In progress'
 				ELSE 
                 (
-					CASE WHEN 2 = ALL ( SELECT e2.estado FROM ejecuciones e2
+					CASE WHEN 2 = ALL ( SELECT e2.idestadoejecucion FROM ejecuciones e2
 					RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
 					WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan 
 					) 
@@ -504,16 +522,16 @@ CREATE  OR REPLACE VIEW `estado_casos` AS
 		,cp.nombre
 		,MAX(e.fecha_ejecucion) fecha_ultima_ejecucion
 		,MAX(e.idejecucion) id_ultima_ejecucion
-		,CASE WHEN e.estado IS NULL THEN
+		,CASE WHEN e.idestadoejecucion IS NULL THEN
 			'Not executed'
 		ELSE
-			CASE WHEN 1 IN ( SELECT e2.estado FROM ejecuciones e2
+			CASE WHEN 1 IN ( SELECT e2.idestadoejecucion FROM ejecuciones e2
 							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
 							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
 							) THEN
 				'In progress'
 			ELSE
-				CASE WHEN 2 = ( SELECT e2.estado FROM ejecuciones e2
+				CASE WHEN 2 = ( SELECT e2.idestadoejecucion FROM ejecuciones e2
 							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
 							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
 							ORDER BY e2.fecha_ejecucion DESC LIMIT 1
@@ -1033,13 +1051,25 @@ COMMIT;
 
 
 -- -----------------------------------------------------
+-- Data for table `docps-dev`.`estado_ejecuciones`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`estado_ejecuciones` (`idestadoejecucion`, `nombre`) VALUES (1, 'In progress');
+INSERT INTO `docps-dev`.`estado_ejecuciones` (`idestadoejecucion`, `nombre`) VALUES (2, 'Passed');
+INSERT INTO `docps-dev`.`estado_ejecuciones` (`idestadoejecucion`, `nombre`) VALUES (3, 'Failed');
+
+COMMIT;
+
+
+-- -----------------------------------------------------
 -- Data for table `docps-dev`.`ejecuciones`
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (1, 1, 'En progreso', 1, 1, 1, 1, 1, '2021-09-10');
-INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (2, 3, 'Falló', 2, 1, 1, 1, 1, '2021-09-11');
-INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `estado`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`) VALUES (3, 2, 'Pasó', 2, 1, 1, 1, 1, '2021-09-12');
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (1, 'En progreso', 1, 1, 1, 1, 1, '2021-09-10', 1);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (2, 'Falló', 2, 1, 1, 1, 1, '2021-09-11', 3);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (3, 'Pasó', 2, 1, 1, 1, 1, '2021-09-12', 2);
 
 COMMIT;
 
