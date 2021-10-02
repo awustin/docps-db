@@ -19,6 +19,7 @@ BEGIN
     
 	SELECT 
 		u.idusuario AS id,
+		CONCAT(u.nombre,' ',u.apellido) AS name,
 		g.idgrupo AS groupid,
 		g.nombre AS groupname,
         u.es_admin AS isAdmin

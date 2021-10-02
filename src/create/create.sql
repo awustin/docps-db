@@ -985,6 +985,12 @@ START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (1, '2021-09-01', 'Pruebas iniciales', 'User acceptance', 1, 1);
 INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (2, '2021-09-02', 'DOCPS-52: testplans', 'Operaciones crear, modificar, eliminar', 1, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (3, '2021-08-01 00:05:00', 'pruebas1', NULL, 3, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (4, '2021-08-01 00:07:00', 'pruebas2', NULL, 3, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (5, '2021-08-01 00:10:30', 'pruebas3', NULL, 3, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (6, '2021-08-05 ', 'pruebas4', NULL, 3, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (7, '2021-08-05', 'pruebas5', NULL, 3, 1);
+INSERT INTO `docps-dev`.`planes` (`idplan`, `fecha_creacion`, `nombre`, `descripcion`, `idproyecto`, `idgrupo`) VALUES (8, '2021-08-10', 'pruebas6', NULL, 3, 1);
 
 COMMIT;
 
@@ -1008,6 +1014,14 @@ START TRANSACTION;
 USE `docps-dev`;
 INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (1, 'Crear un testplan', 'Desde la vista del proyecto', 'Tener un proyecto creado', 1, 1, 1, '2021-09-12', '2021-09-12', 0, 1);
 INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (2, 'Crear un testplan II', 'Desde la vista de Crear Plan', 'Pertenecer a al menos un grupo y tener un proyecto creado', 1, 1, 1, '2021-09-12', '2021-09-12', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (3, 'caso1', NULL, NULL, 3, 3, 1, '2021-08-01 00:01:00', '2021-08-01 00:01:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (4, 'caso2', NULL, NULL, 3, 3, 1, '2021-08-01 00:01:30', '2021-08-01 00:01:30', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (5, 'caso3', NULL, NULL, 3, 3, 1, '2021-08-02 00:02:00', '2021-08-02 00:02:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (6, 'caso4', NULL, NULL, 4, 3, 1, '2021-08-02 00:01:00', '2021-08-02 00:01:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (7, 'caso5', NULL, NULL, 4, 3, 1, '2021-08-05 00:01:00', '2021-08-05 00:01:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (8, 'caso6', NULL, NULL, 5, 3, 1, '2021-08-05 00:01:00', '2021-08-05 00:01:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (9, 'caso7', NULL, NULL, 5, 3, 1, '2021-08-05 00:01:00', '2021-08-05 00:01:00', 0, 1);
+INSERT INTO `docps-dev`.`casos_prueba` (`idcaso`, `nombre`, `descripcion`, `precondiciones`, `idplan`, `idproyecto`, `idgrupo`, `fecha_creacion`, `fecha_ultima_modificacion`, `exportado`, `idprioridad`) VALUES (10, 'caso8', NULL, NULL, 5, 3, 1, '2021-08-05 00:01:00', '2021-08-05 00:01:00', 0, 1);
 
 COMMIT;
 
@@ -1070,6 +1084,10 @@ USE `docps-dev`;
 INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (1, 'En progreso', 1, 1, 1, 1, 1, '2021-09-10', 1);
 INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (2, 'Falló', 2, 1, 1, 1, 1, '2021-09-11', 3);
 INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (3, 'Pasó', 2, 1, 1, 1, 1, '2021-09-12', 2);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (4, NULL, 4, 3, 3, 1, 1, '2021-09-12', 2);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (5, NULL, 5, 3, 3, 1, 1, '2021-08-05', 3);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (6, NULL, 5, 3, 3, 1, 1, '2021-08-10', 2);
+INSERT INTO `docps-dev`.`ejecuciones` (`idejecucion`, `comentario`, `idcaso`, `idplan`, `idproyecto`, `idgrupo`, `idusuario`, `fecha_ejecucion`, `idestadoejecucion`) VALUES (7, NULL, 6, 4, 3, 1, 1, '2021-09-01', 3);
 
 COMMIT;
 
