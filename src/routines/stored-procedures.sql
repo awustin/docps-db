@@ -1074,6 +1074,151 @@ END$$
 DELIMITER ;
 
 
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetTestcasesCount`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetTestcasesCount` (
+	IN idg INTEGER,
+    IN idp INTEGER,
+    IN idpp INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 
+		(SELECT COUNT(*) FROM casos_prueba cp 
+        WHERE pp.idgrupo = cp.idgrupo 
+        AND pp.idproyecto = cp.idproyecto 
+        AND pp.idplan = cp.idplan
+        AND cp.exportado = 0
+        ) AS `count`,
+        pp.nombre AS `name`
+	FROM planes pp
+    WHERE pp.idgrupo = idg
+    AND pp.idproyecto = idp
+    AND pp.idplan = idpp
+    ;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `GetTestplanDataForExport`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `GetTestplanDataForExport` (
+	IN idg INTEGER,
+    IN idp INTEGER,
+    IN idpp INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;
+    
+	SELECT 
+		cp.idcaso AS caseId,
+		CONCAT(pp.nombre,' | ',cp.nombre) AS `name`,
+		CONCAT(pp.descripcion,' | ',cp.descripcion) AS `description`,
+        cp.precondiciones AS preconditions,
+        pr.nombre AS priority        
+	FROM planes pp
+    LEFT JOIN casos_prueba cp ON pp.idgrupo = cp.idgrupo AND pp.idproyecto = cp.idproyecto AND pp.idplan = cp.idplan
+    LEFT JOIN prioridades pr ON pr.idprioridad = cp.idprioridad
+    WHERE pp.idgrupo = 1
+    AND pp.idproyecto = 1
+    AND pp.idplan = 1
+    ORDER BY cp.idcaso
+    ;
+    
+    SELECT 
+		concat(pa.idcaso,'.',pa.idpaso) AS stepId,
+        pa.accion AS `action`,
+        pa.datos AS `data`,
+        pa.resultado AS `result`,
+        pa.orden AS `order`        
+	FROM pasos pa 
+    WHERE pa.idgrupo = 1
+    AND pa.idproyecto = 1
+    AND pa.idplan = 1
+    ORDER BY pa.idcaso, pa.orden
+    ;
+    
+	SELECT 
+		concat(vars.tcId,'.',vars.sId) AS stepId,
+		group_concat(vars.acName) AS acN,
+		group_concat(vars.acValue) AS acV,
+		group_concat(vars.resName) AS reN,
+		group_concat(vars.resValue) AS reV,
+		group_concat(vars.daName) AS daN,
+		group_concat(vars.daValue) AS daV
+	FROM (
+		SELECT 
+			idcaso AS tcId,
+			idpaso AS sId,
+			nombre AS acName,
+			valor AS acValue,
+			null AS resName,
+			null AS resValue,
+			null AS daName,
+			null AS daValue
+		FROM `variables` 
+		WHERE idtipov = 1 
+		AND idgrupo = idg
+		AND idproyecto = idp
+		AND idplan = idpp 
+		
+		UNION
+		
+		SELECT 
+			idcaso AS tcId,
+			idpaso AS sId,
+			null AS acName,
+			null AS acValue,
+			nombre AS resName,
+			valor AS resValue,
+			null AS daName,
+			null AS daValue
+		FROM `variables` 
+		WHERE idtipov = 2 
+		AND idgrupo = idg
+		AND idproyecto = idp
+		AND idplan = idpp 
+		
+		UNION
+		
+		SELECT 
+			idcaso AS tcId,
+			idpaso AS sId,
+			null AS acName,
+			null AS acValue,
+			null AS resName,
+			null AS resValue,
+			nombre AS daName,
+			valor AS daValue
+		FROM `variables` 
+		WHERE idtipov = 3 
+		AND idgrupo = idg
+		AND idproyecto = idp
+		AND idplan = idpp
+	) vars
+	GROUP BY vars.tcId, vars.sId
+	;
+END$$
+DELIMITER ;
+
+
 -- WORKSPACE STORED PROCEDURES
 
 USE `docps-dev`;
