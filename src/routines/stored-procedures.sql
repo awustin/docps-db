@@ -1127,94 +1127,170 @@ BEGIN
 	  SELECT @full_error;
 	 END;
     
-	SELECT 
-		cp.idcaso AS caseId,
-		CONCAT(pp.nombre,' | ',cp.nombre) AS `name`,
-		CONCAT(pp.descripcion,' | ',cp.descripcion) AS `description`,
-        cp.precondiciones AS preconditions,
-        pr.nombre AS priority        
-	FROM planes pp
-    LEFT JOIN casos_prueba cp ON pp.idgrupo = cp.idgrupo AND pp.idproyecto = cp.idproyecto AND pp.idplan = cp.idplan
-    LEFT JOIN prioridades pr ON pr.idprioridad = cp.idprioridad
-    WHERE pp.idgrupo = 1
-    AND pp.idproyecto = 1
-    AND pp.idplan = 1
-    ORDER BY cp.idcaso
-    ;
-    
     SELECT 
-		concat(pa.idcaso,'.',pa.idpaso) AS stepId,
-        pa.accion AS `action`,
-        pa.datos AS `data`,
-        pa.resultado AS `result`,
-        pa.orden AS `order`        
-	FROM pasos pa 
-    WHERE pa.idgrupo = 1
-    AND pa.idproyecto = 1
-    AND pa.idplan = 1
-    ORDER BY pa.idcaso, pa.orden
-    ;
+		COUNT(*)
+	INTO @casesCount 
+    FROM casos_prueba
+    WHERE idgrupo = idg
+    AND idproyecto = idp
+    AND idplan = idpp
+    AND exportado = 0;
     
-	SELECT 
-		concat(vars.tcId,'.',vars.sId) AS stepId,
-		group_concat(vars.acName) AS acN,
-		group_concat(vars.acValue) AS acV,
-		group_concat(vars.resName) AS reN,
-		group_concat(vars.resValue) AS reV,
-		group_concat(vars.daName) AS daN,
-		group_concat(vars.daValue) AS daV
-	FROM (
+    SELECT @casesCount AS totalCases;
+    
+    IF (@casesCount > 0) THEN 
 		SELECT 
-			idcaso AS tcId,
-			idpaso AS sId,
-			nombre AS acName,
-			valor AS acValue,
-			null AS resName,
-			null AS resValue,
-			null AS daName,
-			null AS daValue
-		FROM `variables` 
-		WHERE idtipov = 1 
-		AND idgrupo = idg
-		AND idproyecto = idp
-		AND idplan = idpp 
-		
-		UNION
+			cp.idcaso AS caseId,
+			CONCAT(pp.nombre,' | ',cp.nombre) AS `name`,
+			CONCAT(pp.descripcion,' | ',cp.descripcion) AS `description`,
+			cp.precondiciones AS preconditions,
+			pr.nombre AS priority        
+		FROM planes pp
+		LEFT JOIN casos_prueba cp ON pp.idgrupo = cp.idgrupo AND pp.idproyecto = cp.idproyecto AND pp.idplan = cp.idplan
+		LEFT JOIN prioridades pr ON pr.idprioridad = cp.idprioridad
+		WHERE pp.idgrupo = idg
+		AND pp.idproyecto = idp
+		AND pp.idplan = idpp
+        AND cp.exportado = 0
+		ORDER BY cp.idcaso
+		;
 		
 		SELECT 
-			idcaso AS tcId,
-			idpaso AS sId,
-			null AS acName,
-			null AS acValue,
-			nombre AS resName,
-			valor AS resValue,
-			null AS daName,
-			null AS daValue
-		FROM `variables` 
-		WHERE idtipov = 2 
-		AND idgrupo = idg
-		AND idproyecto = idp
-		AND idplan = idpp 
-		
-		UNION
-		
-		SELECT 
-			idcaso AS tcId,
-			idpaso AS sId,
-			null AS acName,
-			null AS acValue,
-			null AS resName,
-			null AS resValue,
-			nombre AS daName,
-			valor AS daValue
-		FROM `variables` 
-		WHERE idtipov = 3 
-		AND idgrupo = idg
-		AND idproyecto = idp
-		AND idplan = idpp
-	) vars
-	GROUP BY vars.tcId, vars.sId
-	;
+			steps.caseId,
+			steps.stepId,
+			steps.`order`,
+			steps.`action`,
+			steps.result,
+			steps.`data`,
+			v.acN,
+			v.acV,
+			v.reN,
+			v.reV,
+			v.daN,
+			v.daV
+		FROM
+		(
+			SELECT 
+				pa.idcaso AS caseId,
+				concat(pa.idcaso,'.',pa.idpaso) AS stepId,
+				pa.accion AS `action`,
+				pa.datos AS `data`,
+				pa.resultado AS `result`,
+				pa.orden AS `order`        
+			FROM pasos pa 
+            JOIN casos_prueba casos ON pa.idgrupo = casos.idgrupo AND pa.idproyecto = casos.idproyecto AND pa.idplan = casos.idplan AND pa.idcaso = casos.idcaso
+			WHERE pa.idgrupo = idg
+			AND pa.idproyecto = idp
+			AND pa.idplan = idpp
+            AND casos.exportado = 0
+			ORDER BY pa.idcaso, pa.orden
+		) steps
+		LEFT JOIN 
+		(
+			SELECT 
+				concat(vars.tcId,'.',vars.sId) AS stepId,
+				group_concat(vars.acName) AS acN,
+				group_concat(vars.acValue) AS acV,
+				group_concat(vars.resName) AS reN,
+				group_concat(vars.resValue) AS reV,
+				group_concat(vars.daName) AS daN,
+				group_concat(vars.daValue) AS daV
+			FROM (
+				SELECT 
+					idcaso AS tcId,
+					idpaso AS sId,
+					nombre AS acName,
+					valor AS acValue,
+					null AS resName,
+					null AS resValue,
+					null AS daName,
+					null AS daValue
+				FROM `variables` 
+				WHERE idtipov = 1 
+				AND idgrupo = idg
+				AND idproyecto = idp
+				AND idplan = idpp 
+				
+				UNION
+				
+				SELECT 
+					idcaso AS tcId,
+					idpaso AS sId,
+					null AS acName,
+					null AS acValue,
+					nombre AS resName,
+					valor AS resValue,
+					null AS daName,
+					null AS daValue
+				FROM `variables` 
+				WHERE idtipov = 2 
+				AND idgrupo = idg
+				AND idproyecto = idp
+				AND idplan = idpp 
+				
+				UNION
+				
+				SELECT 
+					idcaso AS tcId,
+					idpaso AS sId,
+					null AS acName,
+					null AS acValue,
+					null AS resName,
+					null AS resValue,
+					nombre AS daName,
+					valor AS daValue
+				FROM `variables` 
+				WHERE idtipov = 3 
+				AND idgrupo = idg
+				AND idproyecto = idp
+				AND idplan = idpp
+			) vars
+			GROUP BY vars.tcId, vars.sId
+		) v ON v.stepId = steps.stepId
+		ORDER By steps.stepId, steps.order
+		;		
+    END IF;
+END$$
+DELIMITER ;
+
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `MarkTestcasesAsExported`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `MarkTestcasesAsExported` (
+	IN idg INTEGER,
+	IN idp INTEGER,
+	IN idpp INTEGER,
+	IN statusExportado INTEGER,
+    IN cuentaCasos INTEGER
+)
+BEGIN    
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+	
+	IF (cuentaCasos = -1) THEN
+		SET cuentaCasos = 0;
+	END IF;
+    
+	START TRANSACTION;
+		UPDATE `docps-dev`.`casos_prueba` SET `exportado`=statusExportado 
+        WHERE `idplan` = idpp
+        AND `idproyecto` = idp
+        AND `idgrupo` = idg;
+        
+        IF (statusExportado = 1) THEN
+			INSERT INTO `docps-dev`.`operaciones_exportacion`(`idgrupo`,`fecha_operacion`,`total_casos_generados`,`estado`)
+			VALUES(idg,SYSDATE(),cuentaCasos,1);
+		END IF;
+	COMMIT;
+		SELECT 'TESTPLAN MARKED AS EXPORTED' AS message, 1 AS success;
 END$$
 DELIMITER ;
 
