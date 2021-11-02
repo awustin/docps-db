@@ -44,7 +44,7 @@ BEGIN
     JOIN grupos g ON cp.idgrupo = g.idgrupo
     LEFT JOIN pasos pa ON pa.idgrupo = cp.idgrupo AND pa.idproyecto = cp.idproyecto AND pa.idplan = cp.idplan AND pa.idcaso = cp.idcaso
     LEFT JOIN variables v ON v.idgrupo = cp.idgrupo AND v.idproyecto = cp.idproyecto AND v.idplan = cp.idplan AND v.idcaso = cp.idcaso AND pa.idpaso = v.idpaso
-    LEFT JOIN tipovariable tv ON tv.idtipov = v.idtipov
+    LEFT JOIN tipoVariable tv ON tv.idtipov = v.idtipov
     LEFT JOIN prioridades pr ON cp.idprioridad = pr.idprioridad
     WHERE cp.idgrupo = idgrupo
     AND cp.idproyecto = idproyecto
