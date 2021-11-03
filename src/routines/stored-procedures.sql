@@ -969,6 +969,12 @@ BEGIN
         ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS tcKey
         ,cp.nombre AS tcName
         ,estc.estado_del_caso AS tcStatus
+        ,CASE 
+			WHEN estc.estado_del_caso = 'Not executed' THEN 1
+			WHEN estc.estado_del_caso = 'In progress' THEN 2
+            WHEN estc.estado_del_caso = 'Failed' THEN 3
+            WHEN estc.estado_del_caso = 'Passed' THEN 4
+		END AS ordenEstados
         ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d') AS tcModifiedOn
 	FROM planes pp
     JOIN grupos g ON pp.idgrupo = g.idgrupo
@@ -981,6 +987,7 @@ BEGIN
     WHERE pp.idgrupo = idgrupo
     AND pp.idproyecto = idproyecto
     AND pp.idplan = idplan
+    ORDER BY ordenEstados ASC, estc.fecha_ultima_ejecucion DESC
     ;
 END$$
 DELIMITER ;
