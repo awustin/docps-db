@@ -213,7 +213,9 @@ BEGIN
 		END;
 	
 	START TRANSACTION;
-		UPDATE `docps-dev`.`cuentas` SET `eliminada`=1 WHERE idusuario = id;
+		DELETE FROM `docps-dev`.`cuentas` WHERE idusuario = id;
+		DELETE FROM `docps-dev`.`ejecuciones` WHERE idusuario = id;
+		DELETE FROM `docps-dev`.`usuarios` WHERE idusuario = id;
 	COMMIT;
 		SELECT 'USER DELETED' AS message, 1 AS success;
 END$$
