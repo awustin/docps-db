@@ -22,7 +22,19 @@ BEGIN
 		CONCAT(u.nombre,' ',u.apellido) AS name,
 		g.idgrupo AS groupid,
 		g.nombre AS groupname,
-        u.es_admin AS isAdmin
+        u.es_admin AS isAdmin,
+		CAST(ug.admin_grupo AS UNSIGNED) AS isGroupAdmin,
+		CASE 
+			WHEN u.es_admin = 1 THEN 'admin'
+			ELSE 
+				CASE 
+					WHEN EXISTS (
+						SELECT NULL FROM usuarios_grupos ug1
+						WHERE	ug1.admin_grupo = 1 AND ug1.idusuario = u.idusuario
+						) THEN 'groupAdmin'
+					ELSE 'user'
+				END		
+		END AS `role`
     FROM cuentas c 
     LEFT JOIN usuarios u ON u.idusuario = c.idusuario
 	LEFT JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
@@ -400,7 +412,7 @@ BEGIN
         u.idusuario AS id,
         CONCAT(u.nombre,' ',u.apellido) AS completeName
 	FROM usuarios u
-    JOIN cuentas c ON u.idusuario = c.idcuenta
+    JOIN cuentas c ON u.idusuario = c.idusuario
     , (SELECT @curRank := 0) r
     WHERE u.estado_alta = 1 
     AND c.eliminada = 0;
