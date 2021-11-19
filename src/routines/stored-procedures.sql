@@ -104,6 +104,7 @@ CREATE PROCEDURE `InsertUser` (
 	IN `puesto` VARCHAR(255)
    )
 BEGIN
+	DECLARE hashCode CHAR(32);
 	DECLARE exit handler for SQLEXCEPTION
 		BEGIN
 			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
@@ -117,8 +118,11 @@ BEGIN
 		VALUES(nombre,apellido,0,dni,calle,num_calle,direccion_extra,puesto); 
         INSERT INTO `docps-dev`.`cuentas`(`username`,`clave`,`email`,`fecha_creacion`,`idusuario`)
 		VALUES(username,clave,email,SYSDATE(),last_insert_id());
+		INSERT INTO `docps-dev`.`codigos`(`idcuenta`,`hash`,`fecha_expiracion`)
+		VALUES(last_insert_id(),MD5(CONCAT_WS(last_insert_id(),email,username)),DATE_ADD(SYSDATE(), INTERVAL 1 DAY));
+		SET hashCode = MD5(CONCAT_WS(last_insert_id(),email,username));
 	COMMIT;
-		SELECT 'USER CREATED' AS message, 1 AS success;
+		SELECT 'USER CREATED' AS message, 1 AS success, hashCode;
 END$$
 DELIMITER ;
 
@@ -290,7 +294,46 @@ BEGIN
 END$$
 DELIMITER ;
 
+USE `docps-dev`;
+DROP procedure IF EXISTS `VerifyUser`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `VerifyUser` (
+	IN `hashCode` CHAR(32)
+   )
+BEGIN
+	DECLARE numFilas INT;
+	DECLARE vigente INT;
+	DECLARE estado VARCHAR(15);
+	DECLARE idu INT;
+	DECLARE idc INT;
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
 
+	SELECT COUNT(*) INTO numFilas FROM `docps-dev`.`codigos` WHERE `hash` = hashCode;
+
+	IF numFilas = 1 THEN
+		SELECT DATE_SUB(fecha_expiracion, INTERVAL 1 DAY) < SYSDATE() INTO vigente FROM `docps-dev`.`codigos` WHERE `hash` = hashCode;
+		SET estado = CASE WHEN vigente = 1 THEN 'verified' ELSE 'expired' END;		
+	ELSE
+		SET estado = 'failed';
+	END IF;
+	
+	IF estado = 'verified' THEN
+		SELECT idcuenta INTO idc FROM `codigos` WHERE `hash` = hashCode;
+		SELECT idusuario INTO idu FROM `cuentas` WHERE `idcuenta` = idc;
+		UPDATE `docps-dev`.`usuarios` SET `estado_alta` = 1 , `fecha_alta` = SYSDATE() WHERE `idusuario` = idu;
+		DELETE FROM `docps-dev`.`codigos` WHERE `hash` = hashCode;
+	END IF;	
+	
+	SELECT 'USER VERIFIED' AS message, 1 AS success, estado AS `status`;
+END$$
+DELIMITER ;
 
 
 -- GROUPS STORED PROCEDURES

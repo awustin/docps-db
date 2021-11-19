@@ -80,6 +80,24 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`cuentas` (
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `docps-dev`.`codigos`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`codigos` ;
+
+CREATE TABLE IF NOT EXISTS `docps-dev`.`codigos` (
+  `idcuenta` INT NOT NULL,
+  `hash` CHAR(32) NOT NULL,
+  `fecha_expiracion` DATETIME NOT NULL,
+  PRIMARY KEY (`idcuenta`),
+  INDEX `hash_index` (`hash` ASC),
+  CONSTRAINT `fk_cuentas_codigos`
+    FOREIGN KEY (`idcuenta`)
+    REFERENCES `docps-dev`.`cuentas` (`idcuenta`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION)
+ENGINE = INNODB;
+
 
 -- -----------------------------------------------------
 -- Table `docps-dev`.`default_avatar`
