@@ -302,7 +302,9 @@ DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `SearchGroups` (
 	IN nombre VARCHAR(255),
-	IN estado VARCHAR(1)
+	IN estado VARCHAR(1),
+	IN idu INT,
+	IN rol VARCHAR(20)
 )
 BEGIN
 	DECLARE exit handler for SQLEXCEPTION
@@ -316,6 +318,15 @@ BEGIN
 	SET @nombre = CASE WHEN nombre != '' THEN CONCAT(" AND g.nombre = '",nombre,"'") ELSE '' END;
 	
 	SET @estado = CASE WHEN estado != '' THEN CONCAT(" AND g.estado_alta = ",estado) ELSE '' END;
+
+	SET @soloAdminGrupo = CASE WHEN rol != 'admin' THEN REPLACE("
+		AND g.idgrupo IN (
+			SELECT idgrupo
+			FROM usuarios_grupos 
+			WHERE idusuario = <idusuario> AND admin_grupo = 1
+		)"
+		,"<idusuario>", idu)
+	ELSE '' END;
                     
 	SET @getUsuarios = CONCAT("    
 		SELECT
@@ -330,8 +341,11 @@ BEGIN
 		LEFT JOIN archivos a ON g.idarchivo_img = a.idarchivo
 		LEFT JOIN default_avatar da ON g.iddefavatar = da.iddefavatar
 		,(SELECT @curRank := 0) r
-		WHERE 0 = 0",@nombre,@estado,
-		" ORDER BY g.fecha_alta DESC");
+		WHERE 0 = 0"
+		,@nombre
+		,@estado
+		,@soloAdminGrupo
+		," ORDER BY g.fecha_alta DESC");
         
 	PREPARE searchQuery FROM @getUsuarios;
 	EXECUTE searchQuery;
