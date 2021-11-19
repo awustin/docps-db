@@ -196,7 +196,7 @@ BEGIN
 			SELECT @full_error AS message, FALSE AS success;
 			ROLLBACK;
 		END;
-        
+
 	START TRANSACTION;
 			UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`estado_alta`=estado_alta,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
 			WHERE `docps-dev`.`usuarios`.idusuario = id;
@@ -204,6 +204,30 @@ BEGIN
 			WHERE `docps-dev`.`cuentas`.idusuario = id;
 	COMMIT;
 		SELECT 'USER UPDATED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `ActivateUser`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `ActivateUser` (
+	IN `id` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+	
+	START TRANSACTION;
+		UPDATE `docps-dev`.`usuarios` SET `estado_alta`=1,`fecha_alta`=SYSDATE()
+		WHERE `docps-dev`.`usuarios`.idusuario = id;
+	COMMIT;
+		SELECT 'USER ACTIVATED' AS message, 1 AS success;
 END$$
 DELIMITER ;
 
