@@ -9,37 +9,60 @@ CREATE PROCEDURE `UserLogin` (
   IN clave VARCHAR(255)
     )
 BEGIN
+	DECLARE active INT;
 	DECLARE exit handler for SQLEXCEPTION
 	 BEGIN
 	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
 	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
 	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
 	  SELECT @full_error;
-	 END;
-    
-	SELECT 
-		u.idusuario AS id,
-		CONCAT(u.nombre,' ',u.apellido) AS name,
-		g.idgrupo AS groupid,
-		g.nombre AS groupname,
-        u.es_admin AS isAdmin,
-		CAST(ug.admin_grupo AS UNSIGNED) AS isGroupAdmin,
-		CASE 
-			WHEN u.es_admin = 1 THEN 'admin'
-			ELSE 
+	 END;	
+	
+	IF EXISTS (
+		SELECT *
+		FROM `docps-dev`.`cuentas` c
+		JOIN `docps-dev`.`usuarios` u ON u.idusuario = c.idusuario
+		WHERE c.username = username 
+		AND c.clave = clave 
+		)
+	THEN
+		SELECT u.estado_alta INTO active 
+		FROM `docps-dev`.`cuentas` c
+		JOIN `docps-dev`.`usuarios` u ON u.idusuario = c.idusuario
+		WHERE c.username = username 
+		AND c.clave = clave;
+		
+		IF active = 1 THEN
+			SELECT
+				1 AS success, 
+				u.idusuario AS id,
+				CONCAT(u.nombre,' ',u.apellido) AS name,
+				g.idgrupo AS groupid,
+				g.nombre AS groupname,
+		        u.es_admin AS isAdmin,
+				CAST(ug.admin_grupo AS UNSIGNED) AS isGroupAdmin,
 				CASE 
-					WHEN EXISTS (
-						SELECT NULL FROM usuarios_grupos ug1
-						WHERE	ug1.admin_grupo = 1 AND ug1.idusuario = u.idusuario
-						) THEN 'groupAdmin'
-					ELSE 'user'
-				END		
-		END AS `role`
-    FROM cuentas c 
-    LEFT JOIN usuarios u ON u.idusuario = c.idusuario
-	LEFT JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
-	LEFT JOIN grupos g ON g.idgrupo = ug.idgrupo
-    WHERE c.username = username AND c.clave = clave;	
+					WHEN u.es_admin = 1 THEN 'admin'
+					ELSE 
+						CASE 
+							WHEN EXISTS (
+								SELECT NULL FROM usuarios_grupos ug1
+								WHERE	ug1.admin_grupo = 1 AND ug1.idusuario = u.idusuario
+								) THEN 'groupAdmin'
+							ELSE 'user'
+						END		
+				END AS `role`
+		    FROM cuentas c 
+		    LEFT JOIN usuarios u ON u.idusuario = c.idusuario
+			LEFT JOIN usuarios_grupos ug ON u.idusuario = ug.idusuario
+			LEFT JOIN grupos g ON g.idgrupo = ug.idgrupo
+		   WHERE c.username = username AND c.clave = clave;
+	   ELSE 
+	   	SELECT 'INACTIVE' AS message, 0 AS success;
+	   END IF;
+	ELSE 
+		SELECT 'NOT_EXISTS' AS message, 0 AS success;
+	END IF;
 END$$
 DELIMITER ;
 
