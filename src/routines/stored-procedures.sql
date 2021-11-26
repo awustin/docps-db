@@ -1372,7 +1372,7 @@ BEGIN
 			) vars
 			GROUP BY vars.tcId, vars.sId
 		) v ON v.stepId = steps.stepId
-		ORDER By steps.stepId, steps.order
+		ORDER By steps.caseId, steps.order
 		;		
     END IF;
 END$$
