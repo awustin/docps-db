@@ -260,13 +260,17 @@ DELIMITER ;
 
 
 USE `docps-dev`;
-DROP procedure IF EXISTS `InactivateUser`;
+DROP procedure IF EXISTS `DeleteUserById`;
 DELIMITER $$
 USE `docps-dev`$$
-CREATE PROCEDURE `InactivateUser` (
+CREATE PROCEDURE `DeleteUserById` (
 	IN `id` INTEGER
    )
 BEGIN
+	DECLARE isActive INT;
+	DECLARE hasGroups INT;
+	DECLARE hasExecutions INT;
+	
 	DECLARE exit handler for SQLEXCEPTION
 		BEGIN
 			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
@@ -274,13 +278,23 @@ BEGIN
 			SELECT @full_error AS message, FALSE AS success;
 			ROLLBACK;
 		END;
-	
+		
 	START TRANSACTION;
+	
+	SELECT estado_alta INTO isActive FROM `docps-dev`.`usuarios` WHERE idusuario = id;
+	SELECT COUNT(*) INTO hasGroups FROM `docps-dev`.`usuarios_grupos` WHERE idusuario = id;
+	SELECT COUNT(*) INTO hasExecutions FROM `docps-dev`.`ejecuciones` WHERE idusuario = id;	
+	
+	IF (isActive = 1) OR (hasGroups > 0) OR (hasExecutions > 0) THEN
+		SELECT 'DENIED OPERATION' AS message, 0 AS success;
+	ELSE	
 		DELETE FROM `docps-dev`.`cuentas` WHERE idusuario = id;
-		DELETE FROM `docps-dev`.`ejecuciones` WHERE idusuario = id;
 		DELETE FROM `docps-dev`.`usuarios` WHERE idusuario = id;
-	COMMIT;
 		SELECT 'USER DELETED' AS message, 1 AS success;
+	END IF;
+	
+	COMMIT;
+	
 END$$
 DELIMITER ;
 
