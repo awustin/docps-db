@@ -662,6 +662,9 @@ CREATE PROCEDURE `DeleteGroup` (
 	IN `id` INTEGER
    )
 BEGIN
+	DECLARE isActive INT;
+	DECLARE hasUsers INT;
+	DECLARE hasProyects INT;
 	DECLARE exit handler for SQLEXCEPTION
 		BEGIN
 			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
@@ -669,12 +672,19 @@ BEGIN
 			SELECT @full_error AS message, FALSE AS success;
 			ROLLBACK;
 		END;
-	
+		
 	START TRANSACTION;
-		DELETE FROM `docps-dev`.`usuarios_grupos` WHERE idgrupo = id;
-        DELETE FROM `docps-dev`.`grupos` WHERE idgrupo = id;
+		SELECT estado_alta INTO isActive FROM `docps-dev`.`grupos` WHERE idgrupo = id;
+		SELECT COUNT(*) INTO hasUsers FROM `docps-dev`.`usuarios_grupos` WHERE idgrupo = id;
+		SELECT COUNT(*) INTO hasProyects FROM `docps-dev`.`proyectos` WHERE idgrupo = id;	
+		
+		IF (isActive = 1) OR (hasUsers > 0) OR (hasProyects > 0) THEN
+			SELECT 'DENIED OPERATION' AS message, 0 AS success;
+		ELSE
+	      DELETE FROM `docps-dev`.`grupos` WHERE idgrupo = id;
+			SELECT 'GROUP DELETED' AS message, 1 AS success;
+	   END IF;
 	COMMIT;
-		SELECT 'GROUP DELETED' AS message, 1 AS success;
 END$$
 DELIMITER ;
 
