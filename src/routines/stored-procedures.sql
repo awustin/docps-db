@@ -212,8 +212,7 @@ CREATE PROCEDURE `UpdateUser` (
 	IN `calle` VARCHAR(255),
 	IN `num_calle` VARCHAR(255),
 	IN `direccion_extra` VARCHAR(255),
-	IN `puesto` VARCHAR(255),
-	IN `estado_alta` INTEGER
+	IN `puesto` VARCHAR(255)
    )
 BEGIN
 	DECLARE exit handler for SQLEXCEPTION
@@ -225,7 +224,7 @@ BEGIN
 		END;
 
 	START TRANSACTION;
-			UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`estado_alta`=estado_alta,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
+			UPDATE `docps-dev`.`usuarios` SET `nombre`=nombre,`apellido`=apellido,`dni`=dni,`calle`=calle,`num_calle`=num_calle,`direccion_extra`=direccion_extra,`puesto`=puesto
 			WHERE `docps-dev`.`usuarios`.idusuario = id;
 			UPDATE `docps-dev`.`cuentas` SET `username`=username,`clave`=clave,`email`=email
 			WHERE `docps-dev`.`cuentas`.idusuario = id;
@@ -255,6 +254,29 @@ BEGIN
 		WHERE `docps-dev`.`usuarios`.idusuario = id;
 	COMMIT;
 		SELECT 'USER ACTIVATED' AS message, 1 AS success;
+END$$
+DELIMITER ;
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `DeactivateUser`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `DeactivateUser` (
+	IN `id` INTEGER
+   )
+BEGIN
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+
+	START TRANSACTION;
+			UPDATE `docps-dev`.`usuarios` SET `estado_alta`=0 WHERE `docps-dev`.`usuarios`.idusuario = id;
+	COMMIT;
+		SELECT 'USER DEACTIVATED' AS message, 1 AS success;
 END$$
 DELIMITER ;
 
@@ -369,6 +391,45 @@ BEGIN
 	END IF;	
 	
 	SELECT 'USER VERIFIED' AS message, 1 AS success, estado AS `status`;
+END$$
+DELIMITER ;
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `InsertVerificationCode`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `InsertVerificationCode` (
+	IN `id` INTEGER,
+	IN `email` VARCHAR(255)
+   )
+BEGIN
+	DECLARE idc INT;
+	DECLARE hashCode CHAR(32);
+	DECLARE emailUsuario VARCHAR(255);
+
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+        
+	START TRANSACTION;
+		SELECT c.`idcuenta`,c.`email` INTO idc,emailUsuario FROM `docps-dev`.`cuentas` AS c WHERE `idusuario` = id;
+		
+		IF ( emailUsuario = email ) THEN
+		
+			INSERT INTO `docps-dev`.`codigos`(`idcuenta`,`hash`,`fecha_expiracion`)
+			VALUES(idc,MD5(CONCAT_WS(idc,email,id)),DATE_ADD(SYSDATE(), INTERVAL 1 DAY));
+			
+			SET hashCode = MD5(CONCAT_WS(idc,email,id));
+			
+			SELECT 'CODE CREATED' AS message, 1 AS success, hashCode;
+		ELSE
+			SELECT 'WRONG EMAIL' AS message, 0 AS success;
+		END IF;
+	COMMIT;
 END$$
 DELIMITER ;
 
