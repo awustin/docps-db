@@ -797,7 +797,9 @@ BEGIN
         g.nombre AS name
 	FROM grupos g
     JOIN usuarios_grupos ug ON ug.idgrupo = g.idgrupo
-    WHERE ug.idusuario = id;
+    WHERE ug.idusuario = id
+	AND g.estado_alta = 1
+	;
 END$$
 DELIMITER ;
 
