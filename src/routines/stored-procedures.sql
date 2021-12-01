@@ -546,33 +546,6 @@ DELIMITER ;
 
 
 USE `docps-dev`;
-DROP procedure IF EXISTS `InsertGroupMember`;
-DELIMITER $$
-USE `docps-dev`$$
-CREATE PROCEDURE `InsertGroupMember` (
-	IN `idgrupo` INTEGER,
-    IN `idusuario`INTEGER,
-    IN `esAdmin` INTEGER
-   )
-BEGIN
-	DECLARE exit handler for SQLEXCEPTION
-		BEGIN
-			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
-			SET @full_error = @text;
-			SELECT @full_error AS message, FALSE AS success;
-			ROLLBACK;
-		END;
-        
-	START TRANSACTION;
-		INSERT INTO `docps-dev`.`usuarios_grupos`(`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`)
-		VALUES(idgrupo,idusuario,esAdmin,SYSDATE());
-	COMMIT;
-		SELECT 'MEMBER ADDED' AS message, 1 AS success;
-END$$
-DELIMITER ;
-
-
-USE `docps-dev`;
 DROP procedure IF EXISTS `GetUsersForGroups`;
 DELIMITER $$
 USE `docps-dev`$$
@@ -642,8 +615,7 @@ DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `UpdateGroup` (
 	IN `id` INTEGER,
-	IN `nombre` VARCHAR(255),
-	IN `estado_alta` INTEGER
+	IN `nombre` VARCHAR(255)
    )
 BEGIN
 	DECLARE exit handler for SQLEXCEPTION
@@ -655,7 +627,7 @@ BEGIN
 		END;
         
 	START TRANSACTION;
-		UPDATE `docps-dev`.`grupos` SET `nombre`=nombre,`estado_alta`=estado_alta
+		UPDATE `docps-dev`.`grupos` SET `nombre`=nombre
 		WHERE `docps-dev`.`grupos`.idgrupo = id;
 	COMMIT;
 		SELECT 'GROUP UPDATED' AS message, 1 AS success;
@@ -664,11 +636,13 @@ DELIMITER ;
 
 
 USE `docps-dev`;
-DROP procedure IF EXISTS `DeleteGroupMembers`;
+DROP procedure IF EXISTS `UpdateGroupMembers`;
 DELIMITER $$
 USE `docps-dev`$$
-CREATE PROCEDURE `DeleteGroupMembers` (
-	IN `id` INTEGER
+CREATE PROCEDURE `UpdateGroupMembers` (
+	IN `idg` INTEGER,
+	IN `valuesInsert` VARCHAR(512),
+	IN `eliminar` INTEGER
    )
 BEGIN
 	DECLARE exit handler for SQLEXCEPTION
@@ -678,11 +652,17 @@ BEGIN
 			SELECT @full_error AS message, FALSE AS success;
 			ROLLBACK;
 		END;
-        
-	START TRANSACTION;
-		DELETE FROM  `docps-dev`.`usuarios_grupos` WHERE idgrupo = id;
-	COMMIT;
-		SELECT 'GROUP MEMBERS DELETED' AS message, 1 AS success;
+		
+		SET @insertarMiembros = CONCAT("INSERT INTO `docps-dev`.`usuarios_grupos`(`idgrupo`,`idusuario`,`admin_grupo`,`fecha_alta`) VALUES ", valuesInsert);
+		
+		DELETE FROM `docps-dev`.`usuarios_grupos` WHERE `idgrupo` = idg;
+		
+		IF eliminar != 1 THEN
+			PREPARE insertQuery FROM @insertarMiembros;
+			EXECUTE insertQuery;
+		END IF;
+		
+		SELECT 'MEMBERS UPDATED' AS message, 1 AS success;
 END$$
 DELIMITER ;
 
@@ -748,6 +728,48 @@ BEGIN
 	COMMIT;
 END$$
 DELIMITER ;
+
+
+
+USE `docps-dev`;
+DROP procedure IF EXISTS `ChangeGroupStatusById`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `ChangeGroupStatusById` (
+	IN `id` INTEGER,
+	IN `estado` VARCHAR(10)
+   )
+BEGIN
+	DECLARE estadoActual INT;
+	
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+
+	START TRANSACTION;
+		SELECT `estado_alta` INTO estadoActual FROM `docps-dev`.`grupos` WHERE `idgrupo` = id;
+		
+		IF ( estadoActual = IF(estado = 'active',1,0) ) THEN
+			UPDATE `docps-dev`.`grupos` SET `estado_alta` = NOT estadoActual  WHERE `idgrupo` = id;
+			
+			IF estadoActual = 0 THEN
+				SELECT 'ACTIVATE' AS message, 1 AS success;
+			ELSE
+				SELECT 'DEACTIVATE' AS message, 1 AS success;
+			END IF;
+			
+		ELSE
+			SELECT 'INCONSISTENT STATUS' AS message, 0 AS success;
+		END IF;
+		
+	COMMIT;
+END$$
+DELIMITER ;
+
 
 
 
