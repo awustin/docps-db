@@ -68,6 +68,39 @@ DELIMITER ;
 
 
 USE `docps-dev`;
+DROP procedure IF EXISTS `ChangePassword`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `ChangePassword` (
+	IN `id` INTEGER,
+	IN `actualIngresada` VARCHAR(255),
+	IN `nuevaIngresada` VARCHAR(255)
+   )
+BEGIN
+	DECLARE actual VARCHAR(255);
+	DECLARE exit handler for SQLEXCEPTION
+		BEGIN
+			GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+			SET @full_error = @text;
+			SELECT @full_error AS message, FALSE AS success;
+			ROLLBACK;
+		END;
+
+	START TRANSACTION;
+		SELECT clave INTO actual FROM `docps-dev`.`cuentas` WHERE idusuario=id;
+		
+		IF actual = actualIngresada THEN
+			UPDATE `docps-dev`.`cuentas` SET clave = nuevaIngresada WHERE idusuario=id;
+			SELECT 'PASSWORD_CHANGED' AS message, 1 AS success;
+		ELSE
+			SELECT 'WRONG_CURRENT_PASSWORD' AS message, 0 AS success;
+		END IF;
+	COMMIT;
+END$$
+DELIMITER ;
+
+
+USE `docps-dev`;
 DROP procedure IF EXISTS `GetUserInfoById`;
 DELIMITER $$
 USE `docps-dev`$$
