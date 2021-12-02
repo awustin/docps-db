@@ -46,13 +46,19 @@ CREATE TABLE IF NOT EXISTS `docps-dev`.`usuarios` (
   `num_calle` VARCHAR(10) NULL,
   `direccion_extra` VARCHAR(45) NULL,
   `puesto` VARCHAR(45) NULL,
+  `iddefavatar` INT NULL,
   PRIMARY KEY (`idusuario`),
   INDEX `fk_usuario_archivos1_idx` (`idarchivo_img` ASC),
   CONSTRAINT `fk_usuario_archivos1`
     FOREIGN KEY (`idarchivo_img`)
     REFERENCES `docps-dev`.`archivos` (`idarchivo`)
     ON DELETE SET NULL
-    ON UPDATE CASCADE)
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_usuarios_default_avatar1`
+    FOREIGN KEY (`iddefavatar`)
+    REFERENCES `docps-dev`.`default_avatar` (`iddefavatar`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
 ENGINE = InnoDB;
 
 
@@ -924,27 +930,6 @@ SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 
--- -----------------------------------------------------
--- Data for table `docps-dev`.`usuarios`
--- -----------------------------------------------------
-START TRANSACTION;
-USE `docps-dev`;
-INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (1, 'Agustin', 'Juan', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
-INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`) VALUES (2, 'Admin', 'Test', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III');
-
-COMMIT;
-
-
--- -----------------------------------------------------
--- Data for table `docps-dev`.`cuentas`
--- -----------------------------------------------------
-START TRANSACTION;
-USE `docps-dev`;
-INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (1, 'agusdev', '123', 'agustingarcia@gmail.com', '2021-04-13 21:00:00', 1, 0);
-INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (2, 'testadmin', '123', 'test@admin.docps', '2021-04-13 21:00:00', 2, 0);
-
-COMMIT;
-
 
 -- -----------------------------------------------------
 -- Data for table `docps-dev`.`default_avatar`
@@ -956,6 +941,33 @@ INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (2, 'def
 INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (3, 'defgreen');
 INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (4, 'defblue');
 INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (5, 'defpurple');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES
+(6, 'userred'),
+(7, 'useryellow'),
+(8, 'usergreen'),
+(9, 'userblue'),
+(10, 'userpurple');
+
+COMMIT;
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`usuarios`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`, `iddefavatar`) VALUES (1, 'Agustin', 'Juan', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III', 6);
+INSERT INTO `docps-dev`.`usuarios` (`idusuario`, `nombre`, `apellido`, `estado_alta`, `fecha_alta`, `es_admin`, `idarchivo_img`, `dni`, `calle`, `num_calle`, `direccion_extra`, `puesto`, `iddefavatar`) VALUES (2, 'Admin', 'Test', 1, '2021-04-13 21:00:00', 1, NULL, '38900000', 'Calle1', '1812', 'Barrio1', 'Software Engineer III', 7);
+
+COMMIT;
+
+
+-- -----------------------------------------------------
+-- Data for table `docps-dev`.`cuentas`
+-- -----------------------------------------------------
+START TRANSACTION;
+USE `docps-dev`;
+INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (1, 'agusdev', '123', 'agustingarcia@gmail.com', '2021-04-13 21:00:00', 1, 0);
+INSERT INTO `docps-dev`.`cuentas` (`idcuenta`, `username`, `clave`, `email`, `fecha_creacion`, `idusuario`, `eliminada`) VALUES (2, 'testadmin', '123', 'test@admin.docps', '2021-04-13 21:00:00', 2, 0);
 
 COMMIT;
 

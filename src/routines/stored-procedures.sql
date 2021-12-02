@@ -200,28 +200,30 @@ BEGIN
 	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
 	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
 	  SET @full_error = @text;
-	  SELECT @full_error;
+	  SELECT @full_error, 0 AS success;
 	 END;
     
 	SET @daterange = CASE WHEN desde != '' AND hasta != '' THEN CONCAT(" AND c.fecha_creacion BETWEEN STR_TO_DATE('",desde,"','%Y-%m-%d') AND STR_TO_DATE('",hasta,"','%Y-%m-%d')") WHEN desde != '' AND hasta = '' THEN CONCAT(" AND c.fecha_creacion > STR_TO_DATE('",desde,"','%Y-%m-%d')") ELSE '' END;
                         
-	SET @email = CASE WHEN email != '' THEN CONCAT(" AND c.email = '",email,"'") ELSE '' END;
+	SET @email = CASE WHEN email != '' THEN CONCAT(" AND c.email LIKE '%",email,"%'") ELSE '' END;
 	
-	SET @nombre = CASE WHEN nombre != '' THEN CONCAT(" AND u.nombre = '",nombre,"'") ELSE '' END;
+	SET @nombre = CASE WHEN nombre != '' THEN REPLACE(" AND u.nombre LIKE '%<nom>%' OR u.apellido LIKE '%<nom>%' ", "<nom>", nombre) ELSE '' END;
 	
 	SET @estado = CASE WHEN estado != '' THEN CONCAT(" AND u.estado_alta = ",estado) ELSE '' END;
                     
 	SET @getUsuarios = CONCAT("    
 		SELECT
-			@curRank := @curRank + 1 AS `key`
+			1 AS success
+			,@curRank := @curRank + 1 AS `key`
 			,u.idusuario AS id
 			,DATE_FORMAT(c.fecha_creacion, '%Y-%m-%d') AS createdOn
-			,u.nombre AS `name`
-			,u.apellido AS lastname
 			,c.email AS email
+			,CONCAT(u.nombre,' ',u.apellido) AS `name`
 			,case when u.estado_alta = 1 then 'active' else 'inactive' end AS status
+			,da.name AS defAvatar
 		FROM usuarios u 
 		JOIN cuentas c on u.idusuario = c.idusuario
+		LEFT JOIN default_avatar da on u.iddefavatar = da.iddefavatar
         ,(SELECT @curRank := 0) r
 		WHERE c.eliminada = 0",@daterange,@email,@nombre,@estado);
         
@@ -453,6 +455,8 @@ BEGIN
 		
 		IF ( emailUsuario = email ) THEN
 		
+			DELETE FROM `docps-dev`.`codigos` WHERE `idcuenta` = idc;
+		
 			INSERT INTO `docps-dev`.`codigos`(`idcuenta`,`hash`,`fecha_expiracion`)
 			VALUES(idc,MD5(CONCAT_WS(idc,email,id)),DATE_ADD(SYSDATE(), INTERVAL 1 DAY));
 			
@@ -595,9 +599,11 @@ BEGIN
 	SELECT 		
         u.idusuario AS `key`,
         u.idusuario AS id,
-        CONCAT(u.nombre,' ',u.apellido) AS completeName
+        CONCAT(u.nombre,' ',u.apellido) AS completeName,
+		da.name AS `defAvatar`
 	FROM usuarios u
     JOIN cuentas c ON u.idusuario = c.idusuario
+	LEFT JOIN default_avatar da ON da.iddefavatar = u.iddefavatar
     , (SELECT @curRank := 0) r
     WHERE u.estado_alta = 1 
     AND c.eliminada = 0;
