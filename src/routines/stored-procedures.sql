@@ -1154,6 +1154,7 @@ BEGIN
 				,DATE_FORMAT(p.fecha_creacion, '%Y-%m-%d') AS createdOn
 				,ep.status AS `status`
 				,pr.nombre AS projectName
+				,pr.idproyecto AS projectId
 			FROM planes p 
 			LEFT JOIN estado_planes ep ON p.idgrupo = ep.idgrupo AND p.idproyecto = ep.idproyecto AND p.idplan = ep.idplan
 			LEFT JOIN planes_etiquetas pe ON p.idgrupo = pe.idgrupo AND p.idproyecto = pe.idproyecto AND p.idplan = pe.idplan
@@ -1166,6 +1167,7 @@ BEGIN
             [nombre]
             [fechas]
 			GROUP BY id
+			ORDER BY p.idgrupo, p.idproyecto, p.fecha_creacion DESC
 		) AS plans
         [etiquetas]"
 	,"[grupo]",@idgrupo)
