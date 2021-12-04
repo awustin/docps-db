@@ -970,12 +970,15 @@ BEGIN
         ,CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS tpId
 				,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d') AS tpCreatedOn
         ,ep.status AS tpStatus
+		,da.name AS `defaultAvatar`
 	FROM proyectos p
     JOIN grupos g ON g.idgrupo = p.idgrupo
+	LEFT JOIN default_avatar da ON g.iddefavatar = da.iddefavatar
     LEFT JOIN planes pp ON pp.idgrupo = p.idgrupo AND pp.idproyecto = p.idproyecto
     LEFT JOIN estado_planes ep ON ep.idgrupo = pp.idgrupo AND ep.idproyecto = pp.idproyecto AND ep.idplan = pp.idplan
     WHERE p.idgrupo = idgrupo
     AND p.idproyecto = idproyecto
+	ORDER BY pp.fecha_creacion DESC
     ;
 END$$
 DELIMITER ;
