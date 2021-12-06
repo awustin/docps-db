@@ -1104,7 +1104,6 @@ END$$
 DELIMITER ;
 
 
-
 USE `docps-dev`;
 DROP procedure IF EXISTS `SearchTestplans`;
 DELIMITER $$
@@ -1273,7 +1272,9 @@ CREATE PROCEDURE `UpdateTestplan` (
     IN `idproyecto` INTEGER,
     IN `idplan` INTEGER,
 	IN `nombre` VARCHAR(255),
-	IN `descripcion` VARCHAR(255)
+	IN `descripcion` VARCHAR(255),
+	IN `arrEtiquetas` VARCHAR(1024),
+	IN `cuentaEtiquetas` INT
    )
 BEGIN
 	DECLARE exit handler for SQLEXCEPTION
@@ -1289,6 +1290,31 @@ BEGIN
 		WHERE `docps-dev`.`planes`.idgrupo = idgrupo
         AND `docps-dev`.`planes`.idproyecto = idproyecto
         AND `docps-dev`.`planes`.idplan = idplan;
+        
+      DELETE FROM `docps-dev`.`planes_etiquetas` 
+		WHERE `planes_etiquetas`.`idgrupo` = idgrupo 
+		AND `planes_etiquetas`.`idproyecto` = idproyecto 
+		AND `planes_etiquetas`.`idplan` = idplan;
+      
+      IF cuentaEtiquetas > 0 THEN
+	      SET @i = 1;
+			WHILE @i <= cuentaEtiquetas DO
+				
+				SET @getElemento = REPLACE(REPLACE("SELECT ELT(<i>,<arrEtiquetas>) INTO @elemento"
+					,"<i>",@i)
+					,"<arrEtiquetas>", arrEtiquetas);
+				PREPARE stmt FROM @getElemento;
+				EXECUTE stmt;
+				
+				INSERT IGNORE INTO `docps-dev`.`etiquetas`(`valor`) VALUES (@elemento);
+				
+				INSERT INTO `docps-dev`.`planes_etiquetas`(`idplan`,`idproyecto`,`idgrupo`,`idetiqueta`)
+				VALUES (idplan, idproyecto, idgrupo, (SELECT idetiqueta FROM `docps-dev`.`etiquetas` WHERE `valor`=@elemento) );
+				
+				SET @i = @i + 1;					
+			END WHILE;			
+		END IF;
+      
 	COMMIT;
 		SELECT 'TESTPLAN UPDATED' AS message, 1 AS success;
 END$$
@@ -1314,11 +1340,11 @@ BEGIN
 		END;
         
 	START TRANSACTION;
-		DELETE FROM  `docps-dev`.`planes_etiquetas` 
-        WHERE idgrupo = idg
-        AND idproyecto = idp
-        AND idplan = idpp
-        ;
+		-- DELETE FROM  `docps-dev`.`planes_etiquetas` 
+        -- WHERE idgrupo = idg
+        -- AND idproyecto = idp
+        -- AND idplan = idpp
+        -- ;		
 	COMMIT;
 		SELECT 'TAGS DELETED' AS message, 1 AS success;
 END$$
