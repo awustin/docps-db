@@ -1622,7 +1622,7 @@ BEGIN
     
 	SELECT 
 		CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS id
-        ,cp.nombre AS testcaseName
+        ,cp.nombre AS `name`
         ,cp.descripcion AS description
         ,cp.precondiciones AS preconditions
         ,pr.nombre AS priority
