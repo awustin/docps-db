@@ -347,7 +347,7 @@ DROP TABLE IF EXISTS `docps-dev`.`ejecuciones` ;
 
 CREATE TABLE IF NOT EXISTS `docps-dev`.`ejecuciones` (
   `idejecucion` INT NOT NULL AUTO_INCREMENT,
-  `comentario` VARCHAR(255) NULL,
+  `comentario` VARCHAR(1024) NULL,
   `idcaso` INT NOT NULL,
   `idplan` INT NOT NULL,
   `idproyecto` INT NOT NULL,

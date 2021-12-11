@@ -216,7 +216,7 @@ BEGIN
 			1 AS success
 			,@curRank := @curRank + 1 AS `key`
 			,u.idusuario AS id
-			,DATE_FORMAT(c.fecha_creacion, '%Y-%m-%d') AS createdOn
+			,DATE_FORMAT(c.fecha_creacion, '%Y-%m-%d %H:%i') AS createdOn
 			,c.email AS email
 			,CONCAT(u.nombre,' ',u.apellido) AS `name`
 			,case when u.estado_alta = 1 then 'active' else 'inactive' end AS status
@@ -534,7 +534,7 @@ BEGIN
 		SELECT
 			@curRank := @curRank + 1 AS `key`
 			,idgrupo AS id
-			,DATE_FORMAT(g.fecha_alta, '%Y-%m-%d') AS createdOn
+			,DATE_FORMAT(g.fecha_alta, '%Y-%m-%d %H:%i') AS createdOn
 			,g.nombre AS `name`
 			,case when g.estado_alta = 1 then 'active' else 'inactive' end AS status
 			,a.nombre AS avatar
@@ -630,7 +630,7 @@ BEGIN
 	SELECT 
 		g.nombre AS name,
 		g.idgrupo AS id,
-        DATE_FORMAT(g.fecha_alta, '%Y-%m-%d') AS createdOn,
+        DATE_FORMAT(g.fecha_alta, '%Y-%m-%d %H:%i') AS createdOn,
         CASE WHEN g.estado_alta = 1 THEN 'active' ELSE 'inactive' END AS status,      
         a.nombre AS avatar,
         da.name AS defaultAvatar,
@@ -968,7 +968,7 @@ BEGIN
         ,g.nombre AS `group`
         ,pp.nombre AS tpTitle
         ,CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS tpId
-				,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d') AS tpCreatedOn
+				,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS tpCreatedOn
         ,ep.status AS tpStatus
 		,da.name AS `defaultAvatar`
 	FROM proyectos p
@@ -1153,7 +1153,7 @@ BEGIN
 				,p.descripcion AS description
 				-- ,e.valor AS tag
 				,GROUP_CONCAT(e.valor SEPARATOR ',') AS tags
-				,DATE_FORMAT(p.fecha_creacion, '%Y-%m-%d') AS createdOn
+				,DATE_FORMAT(p.fecha_creacion, '%Y-%m-%d %H:%i') AS createdOn
 				,ep.status AS `status`
 				,pr.nombre AS projectName
 				,pr.idproyecto AS projectId
@@ -1229,7 +1229,7 @@ BEGIN
         ,pp.nombre AS testplanName
         ,pp.descripcion AS description
         ,e.valor AS tag
-		,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d') AS createdOn
+		,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS createdOn
         ,estp.status
 		,CONCAT(pp.idgrupo,'.',pp.idproyecto) AS projectId
         ,p.nombre AS projectName
@@ -1245,7 +1245,7 @@ BEGIN
             WHEN estc.estado_del_caso = 'Failed' THEN 3
             WHEN estc.estado_del_caso = 'Passed' THEN 4
 		END AS ordenEstados
-        ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d') AS tcModifiedOn
+        ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d %H:%i') AS tcModifiedOn
 	FROM planes pp
     JOIN grupos g ON pp.idgrupo = g.idgrupo
     JOIN proyectos p ON pp.idgrupo = p.idgrupo AND pp.idproyecto = p.idproyecto
@@ -1626,7 +1626,7 @@ BEGIN
         ,cp.descripcion AS description
         ,cp.precondiciones AS preconditions
         ,pr.nombre AS priority
-        ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d') AS modifiedOn
+        ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d %H:%i') AS modifiedOn
         ,CAST(cp.exportado AS UNSIGNED) AS isExported
         ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan) AS testplanId
         ,pp.nombre AS testplanName
@@ -1793,6 +1793,9 @@ BEGIN
 			INSERT INTO `docps-dev`.`variables`(`idtipov`,`nombre`,`valor`,`idpaso`,`idcaso`,`idplan`,`idproyecto`,`idgrupo`)
 			VALUES(2,res_var_n,res_var_v,@nuevo_paso,idcaso,idplan,idproyecto,idgrupo);
 		END IF;
+
+		UPDATE `docps-dev`.`casos_prueba` SET `fecha_ultima_modificacion`=SYSDATE() 
+		WHERE `idgrupo`=idgrupo AND `idproyecto`=idproyecto AND `idplan`=idplan AND `idcaso`=idcaso;
     COMMIT;		
         SELECT 'STEP CREATED' AS message, 1 AS success;
 END$$
@@ -2015,7 +2018,7 @@ BEGIN
 			s.nombre
 		END AS `status`,
         e.comentario AS commentary,
-        DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d') AS createdOn
+        DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d %H:%i') AS createdOn
 	FROM ejecuciones e
     LEFT JOIN estado_ejecuciones s ON e.idestadoejecucion = s.idestadoejecucion
     WHERE e.idgrupo = idg
@@ -2066,7 +2069,7 @@ CREATE PROCEDURE `UpdateExecutionById` (
     IN idpp INTEGER,
     IN idc INTEGER,
     IN ide INTEGER,
-    IN comm VARCHAR(512),
+    IN comm VARCHAR(1024),
     IN idestado INTEGER
    )
 BEGIN
@@ -2175,7 +2178,7 @@ BEGIN
 				,d.idproyecto
 			FROM (
 			SELECT 
-				DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d') AS dataX
+				DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS dataX
 				, COUNT(*) AS dataYtestplans
 				, null AS dataYtestcases
 				, pp.idgrupo AS idgrupo
@@ -2184,7 +2187,7 @@ BEGIN
 			GROUP BY DATE(pp.fecha_creacion) 
 			UNION
             SELECT 
-				DATE_FORMAT(cp.fecha_creacion, '%Y-%m-%d') AS dataX
+				DATE_FORMAT(cp.fecha_creacion, '%Y-%m-%d %H:%i') AS dataX
 				, null AS dataYtestplans
 				, COUNT(*) AS dataYtestcases
 				, cp.idgrupo AS idgrupo
@@ -2240,7 +2243,7 @@ BEGIN
 			,@acc := @acc + plot.dataY AS totalExecutions
 		FROM (
 			SELECT 
-				DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d') AS dataX
+				DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d %H:%i') AS dataX
 				, COUNT(*) AS dataY
 				, e.idgrupo AS idgrupo
 				, e.idproyecto AS idproyecto
