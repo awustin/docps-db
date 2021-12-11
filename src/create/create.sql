@@ -501,38 +501,23 @@ DROP VIEW IF EXISTS `docps-dev`.`estado_planes` ;
 DROP TABLE IF EXISTS `docps-dev`.`estado_planes`;
 USE `docps-dev`;
 CREATE  OR REPLACE VIEW `estado_planes` AS
-    SELECT 
-    pp.idgrupo,
-    pp.idproyecto,
-    pp.idplan,
-    pp.nombre
-    , count(idejecucion) AS numEjecuciones
-    , group_concat(e.idestadoejecucion) AS estados
-    , CASE WHEN count(idejecucion) = 0
-		THEN 'Not executed'
-        ELSE (
-			CASE WHEN 1 IN (
-			SELECT e2.idestadoejecucion FROM ejecuciones e2
-			RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
-            WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan
-            ) 
-				THEN 'In progress'
-				ELSE 
-                (
-					CASE WHEN 2 = ALL ( SELECT e2.idestadoejecucion FROM ejecuciones e2
-					RIGHT JOIN planes pp2 ON e2.idgrupo = pp2.idgrupo AND e2.idproyecto = pp2.idproyecto AND e2.idplan = pp2.idplan
-					WHERE pp.idgrupo = pp2.idgrupo AND pp.idproyecto = pp2.idproyecto AND pp.idplan = pp2.idplan 
-					) 
-						THEN 'Passed'
-						ELSE 'Failed'
-					END
-				)
-                END
-        )
-	END AS status
-    FROM ejecuciones e
-    RIGHT JOIN planes pp ON e.idgrupo = pp.idgrupo AND e.idproyecto = pp.idproyecto AND e.idplan = pp.idplan 
-    GROUP BY pp.idgrupo,pp.idproyecto,pp.idplan;
+SELECT 
+	CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS `plan`
+   ,pp.idgrupo
+   ,pp.idproyecto
+   ,pp.idplan
+   ,pp.nombre
+	,CASE 
+		WHEN 'Not executed' = ALL (SELECT ec1.estado_del_caso FROM estado_casos ec1 WHERE ec1.caso LIKE CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.%')) THEN 'Not executed'
+		WHEN 'Not executed' IN (SELECT ec1.estado_del_caso FROM estado_casos ec1 WHERE ec1.caso LIKE CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.%')) THEN 'In progress'
+		WHEN 'In progress' IN (SELECT ec1.estado_del_caso FROM estado_casos ec1 WHERE ec1.caso LIKE CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.%')) THEN 'In progress'
+		WHEN 'Passed' = ALL (SELECT ec1.estado_del_caso FROM estado_casos ec1 WHERE ec1.caso LIKE CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.%')) THEN 'Passed'
+		ELSE 'Failed'
+	END AS `status`
+FROM planes pp 
+LEFT JOIN estado_casos ec ON ec.caso LIKE CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.%')
+GROUP BY plan
+;
 
 -- -----------------------------------------------------
 -- View `docps-dev`.`estado_casos`
@@ -540,36 +525,26 @@ CREATE  OR REPLACE VIEW `estado_planes` AS
 DROP VIEW IF EXISTS `docps-dev`.`estado_casos` ;
 DROP TABLE IF EXISTS `docps-dev`.`estado_casos`;
 USE `docps-dev`;
-CREATE  OR REPLACE VIEW `estado_casos` AS
-	SELECT 
-		CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS caso
-		,cp.nombre
-		,MAX(e.fecha_ejecucion) fecha_ultima_ejecucion
-		,MAX(e.idejecucion) id_ultima_ejecucion
-		,CASE WHEN e.idestadoejecucion IS NULL THEN
-			'Not executed'
-		ELSE
-			CASE WHEN 1 IN ( SELECT e2.idestadoejecucion FROM ejecuciones e2
-							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
-							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
-							) THEN
-				'In progress'
-			ELSE
-				CASE WHEN 2 = ( SELECT e2.idestadoejecucion FROM ejecuciones e2
-							RIGHT JOIN casos_prueba cp2 ON e2.idgrupo = cp2.idgrupo AND e2.idproyecto = cp2.idproyecto AND e2.idplan = cp2.idplan AND e2.idcaso = cp2.idcaso
-							WHERE cp.idgrupo = cp2.idgrupo AND cp.idproyecto = cp2.idproyecto AND cp.idplan = cp2.idplan AND cp.idcaso = cp2.idcaso
-							ORDER BY e2.fecha_ejecucion DESC LIMIT 1
-							) THEN
-					'Passed'
-				ELSE
-					'Failed'
-				END
-			END
-		END AS estado_del_caso
-	FROM casos_prueba cp
-	LEFT JOIN ejecuciones e ON (e.idgrupo = cp.idgrupo AND e.idproyecto = cp.idproyecto AND cp.idplan = e.idplan AND cp.idcaso = e.idcaso)
-	GROUP BY caso
-	ORDER BY caso ASC, e.fecha_ejecucion DESC;
+CREATE OR REPLACE VIEW `estado_casos` AS
+  SELECT 
+    CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS caso
+    ,cp.nombre
+    ,e.fecha_ejecucion AS fecha_ultima_ejecucion
+    ,e.idejecucion AS id_ultima_ejecucion
+    ,CASE 
+      WHEN e.idestadoejecucion IS NULL THEN 'Not executed'
+      WHEN e.idestadoejecucion = 1 THEN 'In progress'
+      WHEN e.idestadoejecucion = 2 THEN 'Passed'
+      WHEN e.idestadoejecucion = 3 THEN 'Failed'
+    END AS estado_del_caso
+  FROM casos_prueba cp
+  LEFT JOIN ejecuciones e ON (e.idgrupo = cp.idgrupo AND e.idproyecto = cp.idproyecto AND cp.idplan = e.idplan AND cp.idcaso = e.idcaso)
+  WHERE (e.idgrupo,e.idproyecto,e.idplan,e.idcaso,e.fecha_ejecucion) IN 
+  (
+    SELECT e1.idgrupo,e1.idproyecto,e1.idplan,e1.idcaso,MAX(e1.fecha_ejecucion) FROM ejecuciones e1
+    GROUP BY e1.idgrupo,e1.idproyecto,e1.idplan,e1.idcaso 
+  )
+  OR e.idejecucion IS NULL;
 USE `docps-dev`;
 
 DELIMITER $$

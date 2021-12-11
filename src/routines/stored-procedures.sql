@@ -1641,10 +1641,12 @@ BEGIN
         ,tv.nombre AS vType
         ,v.nombre AS vName
         ,v.valor AS vValues
+        ,ec.estado_del_caso AS `status`
 	FROM casos_prueba cp
     JOIN planes pp ON pp.idgrupo = cp.idgrupo AND pp.idproyecto = cp.idproyecto AND pp.idplan = cp.idplan
     JOIN proyectos p ON cp.idgrupo = p.idgrupo AND cp.idproyecto = p.idproyecto 
     JOIN grupos g ON cp.idgrupo = g.idgrupo
+    LEFT JOIN estado_casos ec ON ec.caso = CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso)
     LEFT JOIN pasos pa ON pa.idgrupo = cp.idgrupo AND pa.idproyecto = cp.idproyecto AND pa.idplan = cp.idplan AND pa.idcaso = cp.idcaso
     LEFT JOIN variables v ON v.idgrupo = cp.idgrupo AND v.idproyecto = cp.idproyecto AND v.idplan = cp.idplan AND v.idcaso = cp.idcaso AND pa.idpaso = v.idpaso
     LEFT JOIN tipoVariable tv ON tv.idtipov = v.idtipov
