@@ -113,6 +113,7 @@ DROP TABLE IF EXISTS `docps-dev`.`default_avatar` ;
 CREATE TABLE IF NOT EXISTS `docps-dev`.`default_avatar` (
   `iddefavatar` INT NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(45) NULL,
+	`category` VARCHAR(50) NULL,
   PRIMARY KEY (`iddefavatar`))
 ENGINE = InnoDB;
 
@@ -911,17 +912,17 @@ SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
 -- -----------------------------------------------------
 START TRANSACTION;
 USE `docps-dev`;
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (1, 'defred');
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (2, 'defyellow');
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (3, 'defgreen');
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (4, 'defblue');
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES (5, 'defpurple');
-INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`) VALUES
-(6, 'userred'),
-(7, 'useryellow'),
-(8, 'usergreen'),
-(9, 'userblue'),
-(10, 'userpurple');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES (1, 'defred', 'group');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES (2, 'defyellow', 'group');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES (3, 'defgreen', 'group');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES (4, 'defblue', 'group');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES (5, 'defpurple', 'group');
+INSERT INTO `docps-dev`.`default_avatar` (`iddefavatar`, `name`, `category`) VALUES
+(6, 'userred','user'),
+(7, 'useryellow','user'),
+(8, 'usergreen','user'),
+(9, 'userblue','user'),
+(10, 'userpurple','user');
 
 COMMIT;
 

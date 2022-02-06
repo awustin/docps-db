@@ -170,8 +170,9 @@ BEGIN
 		END;
         
 	START TRANSACTION;
-		INSERT INTO `docps-dev`.`usuarios`(`nombre`,`apellido`,`estado_alta`,`dni`,`calle`,`num_calle`,`direccion_extra`,`puesto`)
-		VALUES(nombre,apellido,0,dni,calle,num_calle,direccion_extra,puesto); 
+		SELECT iddefavatar INTO @iddefavatar FROM `default_avatar` WHERE `category` = 'group' ORDER BY RAND() LIMIT 1;
+		INSERT INTO `docps-dev`.`usuarios`(`nombre`,`apellido`,`estado_alta`,`dni`,`calle`,`num_calle`,`direccion_extra`,`puesto`,`iddefavatar`)
+		VALUES(nombre,apellido,0,dni,calle,num_calle,direccion_extra,puesto,@iddefavatar); 
         INSERT INTO `docps-dev`.`cuentas`(`username`,`clave`,`email`,`fecha_creacion`,`idusuario`)
 		VALUES(username,clave,email,SYSDATE(),last_insert_id());
 		INSERT INTO `docps-dev`.`codigos`(`idcuenta`,`hash`,`fecha_expiracion`)
@@ -572,8 +573,7 @@ BEGIN
 		END;
         
 	START TRANSACTION;
-		SELECT MAX(iddefavatar),MIN(iddefavatar) FROM default_avatar INTO @max,@min;
-		SELECT FLOOR(RAND()*@max + @min) INTO @iddefavatar;
+		SELECT iddefavatar INTO @iddefavatar FROM `default_avatar` WHERE `category` = 'group' ORDER BY RAND() LIMIT 1;
 		INSERT INTO `docps-dev`.`grupos`(`nombre`,`estado_alta`,`fecha_alta`,`iddefavatar`)
 		VALUES(name,1,SYSDATE(),@iddefavatar);
 	COMMIT;
@@ -1222,43 +1222,50 @@ BEGIN
 	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
 	  SELECT @full_error;
 	 END;
-    
 	SELECT 
-		CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS testplanId
+			CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS testplanId
         ,CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan) AS `key`
         ,pp.nombre AS testplanName
         ,pp.descripcion AS description
-        ,e.valor AS tag
-		,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS createdOn
+        ,GROUP_CONCAT(e.valor) AS tags
+			,DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS createdOn
         ,estp.status
-		,CONCAT(pp.idgrupo,'.',pp.idproyecto) AS projectId
+			,CONCAT(pp.idgrupo,'.',pp.idproyecto) AS projectId
         ,p.nombre AS projectName
         ,pp.idgrupo AS groupId
-        ,g.nombre AS groupName
-        ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS tcId
-        ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS tcKey
-        ,cp.nombre AS tcName
-        ,estc.estado_del_caso AS tcStatus
-        ,CASE 
-			WHEN estc.estado_del_caso = 'Not executed' THEN 1
-			WHEN estc.estado_del_caso = 'In progress' THEN 2
-            WHEN estc.estado_del_caso = 'Failed' THEN 3
-            WHEN estc.estado_del_caso = 'Passed' THEN 4
-		END AS ordenEstados
-        ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d %H:%i') AS tcModifiedOn
+        ,g.nombre AS groupName        
 	FROM planes pp
     JOIN grupos g ON pp.idgrupo = g.idgrupo
     JOIN proyectos p ON pp.idgrupo = p.idgrupo AND pp.idproyecto = p.idproyecto
-    LEFT JOIN casos_prueba cp ON pp.idgrupo = cp.idgrupo AND pp.idproyecto = cp.idproyecto AND pp.idplan = cp.idplan
     LEFT JOIN planes_etiquetas pe ON pe.idgrupo = pp.idgrupo AND pe.idproyecto = pp.idproyecto AND pe.idplan = pp.idplan
     LEFT JOIN etiquetas e ON e.idetiqueta = pe.idetiqueta
     LEFT JOIN estado_planes estp ON estp.idgrupo = pp.idgrupo AND estp.idproyecto = pp.idproyecto AND estp.idplan = pp.idplan
-    LEFT JOIN estado_casos estc ON estc.caso = CONCAT(pp.idgrupo,'.',pp.idproyecto,'.',pp.idplan,'.',cp.idcaso)
     WHERE pp.idgrupo = idgrupo
     AND pp.idproyecto = idproyecto
     AND pp.idplan = idplan
-    ORDER BY ordenEstados ASC, estc.fecha_ultima_ejecucion DESC
+	 GROUP BY pp.idgrupo,pp.idproyecto,pp.idplan
     ;
+    
+   SELECT 
+     CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS id
+     ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS `key`
+     ,CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso) AS caseId
+     ,cp.nombre AS caseName
+     ,estc.estado_del_caso AS `status`
+     ,CASE 
+			WHEN estc.estado_del_caso = 'Not executed' THEN 1
+			WHEN estc.estado_del_caso = 'In progress' THEN 2
+		   WHEN estc.estado_del_caso = 'Failed' THEN 3
+		   WHEN estc.estado_del_caso = 'Passed' THEN 4
+		END AS ordenEstados
+     ,DATE_FORMAT(cp.fecha_ultima_modificacion, '%Y-%m-%d %H:%i') AS modifiedOn
+   FROM casos_prueba cp 
+   LEFT JOIN estado_casos estc ON estc.caso = CONCAT(cp.idgrupo,'.',cp.idproyecto,'.',cp.idplan,'.',cp.idcaso)
+	WHERE cp.idgrupo = idgrupo
+	AND cp.idproyecto = idproyecto
+	AND cp.idplan = idplan
+	ORDER BY ordenEstados
+	;
 END$$
 DELIMITER ;
 
@@ -2178,7 +2185,7 @@ BEGIN
 				,d.idproyecto
 			FROM (
 			SELECT 
-				DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d %H:%i') AS dataX
+				DATE_FORMAT(pp.fecha_creacion, '%Y-%m-%d') AS dataX
 				, COUNT(*) AS dataYtestplans
 				, null AS dataYtestcases
 				, pp.idgrupo AS idgrupo
@@ -2187,7 +2194,7 @@ BEGIN
 			GROUP BY DATE(pp.fecha_creacion) 
 			UNION
             SELECT 
-				DATE_FORMAT(cp.fecha_creacion, '%Y-%m-%d %H:%i') AS dataX
+				DATE_FORMAT(cp.fecha_creacion, '%Y-%m-%d') AS dataX
 				, null AS dataYtestplans
 				, COUNT(*) AS dataYtestcases
 				, cp.idgrupo AS idgrupo
@@ -2243,7 +2250,7 @@ BEGIN
 			,@acc := @acc + plot.dataY AS totalExecutions
 		FROM (
 			SELECT 
-				DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d %H:%i') AS dataX
+				DATE_FORMAT(e.fecha_ejecucion, '%Y-%m-%d') AS dataX
 				, COUNT(*) AS dataY
 				, e.idgrupo AS idgrupo
 				, e.idproyecto AS idproyecto
