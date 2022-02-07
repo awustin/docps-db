@@ -16,6 +16,19 @@ CREATE SCHEMA IF NOT EXISTS `docps-dev` DEFAULT CHARACTER SET utf8 ;
 USE `docps-dev` ;
 
 -- -----------------------------------------------------
+-- Table `docps-dev`.`sesiones`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `docps-dev`.`sesiones` ;
+
+CREATE TABLE `sesiones` (
+	`id` INT NOT NULL AUTO_INCREMENT,
+	`id_sesion` VARCHAR(50) NULL,
+	`fecha_expiracion` DATETIME NULL,
+	`host` VARCHAR(128) NULL,
+	PRIMARY KEY (`id`))
+ENGINE = InnoDB;
+
+-- -----------------------------------------------------
 -- Table `docps-dev`.`archivos`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `docps-dev`.`archivos` ;

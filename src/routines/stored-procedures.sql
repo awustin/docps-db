@@ -6,7 +6,8 @@ DELIMITER $$
 USE `docps-dev`$$
 CREATE PROCEDURE `UserLogin` (
 	IN username VARCHAR(255), 
-  IN clave VARCHAR(255)
+  IN clave VARCHAR(255),
+  IN nombre_host VARCHAR(128)
     )
 BEGIN
 	DECLARE active INT;
@@ -31,10 +32,12 @@ BEGIN
 		JOIN `docps-dev`.`usuarios` u ON u.idusuario = c.idusuario
 		WHERE c.username = username 
 		AND c.clave = clave;
-		
+		 
 		IF active = 1 THEN
+			CALL `docps-dev`.`AddSessionId`(nombre_host, @id_sesion);
 			SELECT
 				1 AS success, 
+				@id_sesion AS sessionId,
 				u.idusuario AS id,
 				CONCAT(u.nombre,' ',u.apellido) AS name,
 				g.idgrupo AS groupid,
@@ -63,6 +66,18 @@ BEGIN
 	ELSE 
 		SELECT 'NOT_EXISTS' AS message, 0 AS success;
 	END IF;
+END$$
+DELIMITER ;
+
+USE `docps-dev`;
+DROP PROCEDURE  IF EXISTS `AddSessionId`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE  `AddSessionId` (IN nombre_host VARCHAR(128), OUT id_sesion VARCHAR(128))
+BEGIN	
+	SELECT MD5(CONCAT(SYSDATE(), nombre_host)) INTO id_sesion;
+	
+	INSERT INTO `docps-dev`.`sesiones`(`id_sesion`,`fecha_expiracion`,`host`) VALUES (id_sesion, DATE_ADD(SYSDATE(), INTERVAL 1 DAY), nombre_host);
 END$$
 DELIMITER ;
 
