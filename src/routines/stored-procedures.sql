@@ -70,6 +70,41 @@ END$$
 DELIMITER ;
 
 USE `docps-dev`;
+DROP procedure IF EXISTS `UserLogout`;
+DELIMITER $$
+USE `docps-dev`$$
+CREATE PROCEDURE `UserLogout` (
+	IN id_sesion_cerrar VARCHAR(255), 
+  IN nombre_host_cerrar VARCHAR(255)
+    )
+BEGIN
+	DECLARE active INT;
+	DECLARE exit handler for SQLEXCEPTION
+	 BEGIN
+	  GET DIAGNOSTICS CONDITION 1 @sqlstate = RETURNED_SQLSTATE, 
+	   @errno = MYSQL_ERRNO, @text = MESSAGE_TEXT;
+	  SET @full_error = CONCAT("ERROR ", @errno, " (", @sqlstate, "): ", @text);
+	  SELECT @full_error;
+	 END;	
+	
+	IF EXISTS (
+		SELECT *
+		FROM `docps-dev`.`sesiones`
+		WHERE `id_sesion` = id_sesion_cerrar 
+		AND `host` = nombre_host_cerrar 
+		)
+	THEN
+		START TRANSACTION;
+			DELETE FROM `sesiones` WHERE `id_sesion` = id_sesion_cerrar AND `host` = nombre_host_cerrar;
+		COMMIT;
+		SELECT 'SESSION_ENDED' AS message, 1 AS success;
+	ELSE
+		SELECT 'SESSION_ALREADY_CLOSED' AS message, 0 AS success;
+	END IF;
+END$$
+DELIMITER ;
+
+USE `docps-dev`;
 DROP PROCEDURE  IF EXISTS `AddSessionId`;
 DELIMITER $$
 USE `docps-dev`$$
